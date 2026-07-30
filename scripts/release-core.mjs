@@ -39,7 +39,7 @@ const ALLOWED_PATHS = new Set([
 const ALLOWED_PREFIXES = [
   '.agents/',
   '.claude-plugin/',
-  'deyo/',
+  'vox/',
   'plugins/',
   'providers/',
   'release/',
@@ -112,12 +112,12 @@ export function assertTargetAbsent(versions, targetVersion) {
 
 export function confirmationPhrase(targetVersion, resume = false) {
   assertStableSemver(targetVersion, 'target version')
-  return `${resume ? 'resume' : 'publish'} deyo v${targetVersion}`
+  return `${resume ? 'resume' : 'publish'} vox v${targetVersion}`
 }
 
 export function abortConfirmationPhrase(targetVersion) {
   assertStableSemver(targetVersion, 'target version')
-  return `abort deyo v${targetVersion}`
+  return `abort vox v${targetVersion}`
 }
 
 export function fixForwardConfirmationPhrase(targetVersion, nextTarget) {
@@ -126,7 +126,7 @@ export function fixForwardConfirmationPhrase(targetVersion, nextTarget) {
   if (incrementPatch(targetVersion) !== nextTarget) {
     throw new Error('Fix-forward target must be the next patch')
   }
-  return `fix-forward deyo v${targetVersion} to v${nextTarget}`
+  return `fix-forward vox v${targetVersion} to v${nextTarget}`
 }
 
 export function phaseAtLeast(state, phase) {
@@ -181,10 +181,8 @@ export function validateReleaseState(state) {
         throw new Error('ClawHub-ready state contains an invalid file fingerprint')
       }
     }
-    const requiresProjectionMetadata = compareSemver(state.targetVersion, '1.0.10') >= 0
-    const expectedProjectionKind = compareSemver(state.targetVersion, '1.0.11') >= 0
-      ? 'openclaw-v2'
-      : 'openclaw-v1'
+    const requiresProjectionMetadata = compareSemver(state.targetVersion, '0.1.0') >= 0
+    const expectedProjectionKind = 'openclaw-v2'
     if (requiresProjectionMetadata && state.clawHubProjectionKind !== expectedProjectionKind) {
       throw new Error('ClawHub-ready state is missing its OpenClaw projection kind')
     }
@@ -265,10 +263,10 @@ export function assertReleasePathsAllowed(paths) {
 
 export function validateOriginUrl(url) {
   const allowed = new Set([
-    'git@github.com:casatwy/deyo-skill.git',
-    'https://github.com/casatwy/deyo-skill.git',
+    'git@github.com:casatwy/vox-skill.git',
+    'https://github.com/casatwy/vox-skill.git',
   ])
-  if (!allowed.has(url)) throw new Error(`origin is not the official Deyo Skill repository: ${url}`)
+  if (!allowed.has(url)) throw new Error(`origin is not the official Vox Skill repository: ${url}`)
   return url
 }
 

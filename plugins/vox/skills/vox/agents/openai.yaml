@@ -1,0 +1,7 @@
+interface:
+  display_name: "vox"
+  short_description: "用 vox CLI 安全转写一个链接或精确本地媒体文件"
+  default_prompt: "Use $vox only for my explicit request to transcribe this one URL or exact local media path, and preserve authentication, output, and no-clobber safety boundaries."
+
+policy:
+  allow_implicit_invocation: false

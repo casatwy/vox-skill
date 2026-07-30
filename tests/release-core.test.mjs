@@ -80,7 +80,7 @@ test('target reservation and resume state never allocate another patch', () => {
     releaseNotes,
   })
   assert.equal(state.targetVersion, '1.0.9')
-  assert.equal(confirmationPhrase(state.targetVersion, true), 'resume deyo v1.0.9')
+  assert.equal(confirmationPhrase(state.targetVersion, true), 'resume vox v1.0.9')
 })
 
 test('release options forbid overrides and incompatible modes', () => {
@@ -115,7 +115,7 @@ test('terminal fix-forward validation is limited to a complete tag_pushed state'
     releaseNotesHash: sha256(notes),
   }
   assert.equal(validateTerminalFixForwardState(state), state)
-  assert.equal(fixForwardConfirmationPhrase('1.0.9', '1.0.10'), 'fix-forward deyo v1.0.9 to v1.0.10')
+  assert.equal(fixForwardConfirmationPhrase('1.0.9', '1.0.10'), 'fix-forward vox v1.0.9 to v1.0.10')
   assert.throws(() => fixForwardConfirmationPhrase('1.0.9', '1.0.11'), /next patch/)
   assert.throws(() => validateTerminalFixForwardState({ ...state, phase: 'tagged' }), /tag_pushed/)
   assert.throws(() => validateTerminalFixForwardState({ ...state, clawHubFileFingerprint: [{}] }), /invalid ClawHub/)
@@ -134,7 +134,7 @@ test('frozen abort validation rejects later phases and post-frozen fields', () =
     releaseNotesHash: sha256(notes),
   }
   assert.equal(validateFrozenAbortState(frozen), frozen)
-  assert.equal(abortConfirmationPhrase('1.0.9'), 'abort deyo v1.0.9')
+  assert.equal(abortConfirmationPhrase('1.0.9'), 'abort vox v1.0.9')
   assert.throws(
     () => validateFrozenAbortState({ ...frozen, phase: 'prepared', canonicalTreeHash: 'c'.repeat(64) }),
     /Only a frozen release can be aborted safely/,
@@ -148,13 +148,13 @@ test('frozen abort validation rejects later phases and post-frozen fields', () =
 })
 
 test('release allowlist and official remote fail closed', () => {
-  assert.doesNotThrow(() => assertReleasePathsAllowed(['deyo/SKILL.md', 'plugins/deyo/.codex-plugin/plugin.json']))
+  assert.doesNotThrow(() => assertReleasePathsAllowed(['vox/SKILL.md', 'plugins/vox/.codex-plugin/plugin.json']))
   assert.throws(() => assertReleasePathsAllowed(['../outside', '.env']), /outside the allowlist/)
-  assert.equal(validateOriginUrl('git@github.com:casatwy/deyo-skill.git'), 'git@github.com:casatwy/deyo-skill.git')
-  assert.equal(validateOriginUrl('https://github.com/casatwy/deyo-skill.git'), 'https://github.com/casatwy/deyo-skill.git')
-  assert.throws(() => validateOriginUrl('git@github.com:fork/deyo-skill.git'), /not the official/)
-  assert.equal(validateRemoteConfiguration(['origin'], 'git@github.com:casatwy/deyo-skill.git'), 'git@github.com:casatwy/deyo-skill.git')
-  assert.throws(() => validateRemoteConfiguration(['origin', 'fork'], 'git@github.com:casatwy/deyo-skill.git'), /only the official origin/)
+  assert.equal(validateOriginUrl('git@github.com:casatwy/vox-skill.git'), 'git@github.com:casatwy/vox-skill.git')
+  assert.equal(validateOriginUrl('https://github.com/casatwy/vox-skill.git'), 'https://github.com/casatwy/vox-skill.git')
+  assert.throws(() => validateOriginUrl('git@github.com:fork/vox-skill.git'), /not the official/)
+  assert.equal(validateRemoteConfiguration(['origin'], 'git@github.com:casatwy/vox-skill.git'), 'git@github.com:casatwy/vox-skill.git')
+  assert.throws(() => validateRemoteConfiguration(['origin', 'fork'], 'git@github.com:casatwy/vox-skill.git'), /only the official origin/)
 })
 
 test('resume recovers only exact commit and master-push crash windows', () => {
@@ -191,6 +191,8 @@ test('resume recovers only exact commit and master-push crash windows', () => {
     releaseCommit,
     tag: 'v1.0.9',
     clawHubFileFingerprint: [{ path: 'SKILL.md', size: 1, sha256: 'e'.repeat(64) }],
+    clawHubProjectionKind: 'openclaw-v2',
+    clawHubProjectionTreeHash: 'f'.repeat(64),
   }
   const recoveredPush = reconcileResumeGitState(clawhubReady, {
     localHead: releaseCommit,
@@ -220,7 +222,7 @@ test('resume recovers only exact commit and master-push crash windows', () => {
   assert.equal(recoveredFixForward.releaseCommit, fixForwardCommit)
 })
 
-test('1.0.10 ClawHub-ready state records projection evidence separately from canonical hash', () => {
+test('0.1.0+ ClawHub-ready state records v2 projection evidence separately from canonical hash', () => {
   const notes = 'notes\n'
   const ready = {
     schema: 1,
@@ -235,7 +237,7 @@ test('1.0.10 ClawHub-ready state records projection evidence separately from can
     releaseNotes: notes,
     releaseNotesHash: sha256(notes),
     clawHubFileFingerprint: [{ path: 'SKILL.md', size: 1, sha256: 'e'.repeat(64) }],
-    clawHubProjectionKind: 'openclaw-v1',
+    clawHubProjectionKind: 'openclaw-v2',
     clawHubProjectionTreeHash: 'f'.repeat(64),
   }
   assert.equal(validateReleaseState(ready), ready)
@@ -249,7 +251,7 @@ test('1.0.10 ClawHub-ready state records projection evidence separately from can
   )
 })
 
-test('1.0.11 ClawHub-ready state requires the v2 projection kind', () => {
+test('later ClawHub-ready state still requires the v2 projection kind', () => {
   const notes = 'notes\n'
   const ready = {
     schema: 1,
@@ -275,7 +277,7 @@ test('1.0.11 ClawHub-ready state requires the v2 projection kind', () => {
 })
 
 test('tree hashing includes modes, symlinks, paths, and contents', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'deyo-tree-hash-'))
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'vox-tree-hash-'))
   try {
     await mkdir(path.join(directory, 'nested'))
     const script = path.join(directory, 'nested', 'script.mjs')

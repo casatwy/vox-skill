@@ -1,16 +1,16 @@
 {
-  "name": "deyo-official",
+  "name": "vox-official",
   "owner": {
-    "name": "Deyo"
+    "name": "Vox"
   },
   "metadata": {
-    "description": "Official Deyo plugins"
+    "description": "Official Vox plugins"
   },
   "plugins": [
     {
-      "name": "deyo",
-      "source": "./plugins/deyo",
-      "description": "Transcribe links and local media with the Deyo CLI."
+      "name": "vox",
+      "source": "./plugins/vox",
+      "description": "Transcribe links and local media with the Vox CLI."
     }
   ]
 }

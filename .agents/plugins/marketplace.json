@@ -1,14 +1,14 @@
 {
-  "name": "deyo-official",
+  "name": "vox-official",
   "interface": {
-    "displayName": "Deyo Official"
+    "displayName": "Vox Official"
   },
   "plugins": [
     {
-      "name": "deyo",
+      "name": "vox",
       "source": {
         "source": "local",
-        "path": "./plugins/deyo"
+        "path": "./plugins/vox"
       },
       "policy": {
         "installation": "AVAILABLE",

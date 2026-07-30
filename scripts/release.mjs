@@ -45,12 +45,12 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const clawhub = path.join(root, 'node_modules', '.bin', 'clawhub')
-const recoveryDirectory = path.join(root, '.git', 'deyo-release')
+const recoveryDirectory = path.join(root, '.git', 'vox-release')
 const statePath = path.join(recoveryDirectory, 'state.json')
 const receiptsDirectory = path.join(recoveryDirectory, 'receipts')
 const abortedDirectory = path.join(recoveryDirectory, 'aborted')
 const abandonedDirectory = path.join(recoveryDirectory, 'abandoned')
-const officialRef = '@casatwy/deyo'
+const officialRef = '@casatwy/vox'
 const NETWORK_TIMEOUT_MS = 30_000
 const CLAWHUB_LICENSE = 'MIT-0'
 
@@ -203,7 +203,7 @@ async function assertGitPreflight() {
 }
 
 async function sourceSnapshot(baseVersion, targetVersion) {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'deyo-release-source-'))
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'vox-release-source-'))
   const generatedRoots = new Set([
     '.agents',
     '.claude-plugin',
@@ -227,7 +227,7 @@ async function sourceSnapshot(baseVersion, targetVersion) {
       await mkdir(path.dirname(target), { recursive: true })
       await cp(source, target, { dereference: false, preserveTimestamps: false })
     }
-    const manifestPath = path.join(temporary, 'deyo/manifest.json')
+    const manifestPath = path.join(temporary, 'vox/manifest.json')
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
     if (![baseVersion, targetVersion].includes(manifest.skillVersion)) {
       throw new Error(`Canonical manifest diverged while computing source snapshot: ${manifest.skillVersion}`)
@@ -348,10 +348,10 @@ async function verifyExact(version) {
 }
 
 async function stageCanonicalVersion(version) {
-  const canonical = await mkdtemp(path.join(os.tmpdir(), 'deyo-canonical-stage-'))
-  const projected = await mkdtemp(path.join(os.tmpdir(), 'deyo-clawhub-stage-'))
+  const canonical = await mkdtemp(path.join(os.tmpdir(), 'vox-canonical-stage-'))
+  const projected = await mkdtemp(path.join(os.tmpdir(), 'vox-clawhub-stage-'))
   try {
-    await cp(path.join(root, 'deyo'), canonical, { recursive: true, dereference: false, preserveTimestamps: false })
+    await cp(path.join(root, 'vox'), canonical, { recursive: true, dereference: false, preserveTimestamps: false })
     const manifestPath = path.join(canonical, 'manifest.json')
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
     manifest.skillVersion = version
@@ -396,12 +396,12 @@ async function runRepositoryValidation() {
 async function assertCliPublished(minimumCliVersion, targetVersion) {
   await progressStage('Verify minimum npm CLI version', async () => {
     const compatibleRange = `^${minimumCliVersion}`
-    const result = await textCommand('npm', ['view', `@casatwy/deyo@${compatibleRange}`, 'version', '--json'], { allowFailure: true, timeoutMs: NETWORK_TIMEOUT_MS })
+    const result = await textCommand('npm', ['view', `@casatwy/vox@${compatibleRange}`, 'version', '--json'], { allowFailure: true, timeoutMs: NETWORK_TIMEOUT_MS })
     if (result.code !== 0) {
       throw new CommandExecutionError('npm view', {
         code: result.code,
         signal: result.signal,
-        message: `A published @casatwy/deyo version satisfying ${compatibleRange} is required before Deyo Skill v${targetVersion}`,
+        message: `A published @casatwy/vox version satisfying ${compatibleRange} is required before Vox Skill v${targetVersion}`,
       })
     }
     const payload = JSON.parse(result.stdout || 'null')
@@ -409,8 +409,8 @@ async function assertCliPublished(minimumCliVersion, targetVersion) {
     assertStableSemver(publishedVersion, 'published CLI version')
     if (compareSemver(publishedVersion, minimumCliVersion) < 0) {
       throw new Error(
-        `Published @casatwy/deyo ${publishedVersion} does not satisfy minimum CLI ${minimumCliVersion} ` +
-        `for Deyo Skill v${targetVersion}`,
+        `Published @casatwy/vox ${publishedVersion} does not satisfy minimum CLI ${minimumCliVersion} ` +
+        `for Vox Skill v${targetVersion}`,
       )
     }
   })
@@ -420,16 +420,16 @@ async function clawHubPublishDryRun(stage, targetVersion, releaseNotes, sourceCo
   await progressStage('Run ClawHub publish dry-run', async () => {
     await textCommand(clawhub, [
       'publish', stage,
-      '--slug', 'deyo',
-      '--name', 'Deyo',
+      '--slug', 'vox',
+      '--name', 'Vox',
       '--owner', 'casatwy',
       '--version', targetVersion,
       '--tags', 'latest',
       '--changelog', releaseNotes,
-      '--source-repo', 'https://github.com/casatwy/deyo-skill',
+      '--source-repo', 'https://github.com/casatwy/vox-skill',
       '--source-commit', sourceCommit,
       '--source-ref', `v${targetVersion}`,
-      '--source-path', 'deyo',
+      '--source-path', 'vox',
       '--dry-run',
       '--json',
     ], { timeoutMs: 60_000, label: 'clawhub publish --dry-run' })
@@ -462,7 +462,7 @@ async function fullPreflight({ resume, state }) {
   }
   if (!resume || phaseAtLeast(recoveredState, 'prepared')) await runRepositoryValidation()
   else progressSkip('Repository validation preflight', 'runs while preparing the frozen workspace')
-  const canonical = JSON.parse(await readFile(path.join(root, 'deyo/manifest.json'), 'utf8'))
+  const canonical = JSON.parse(await readFile(path.join(root, 'vox/manifest.json'), 'utf8'))
 
   if (resume) {
     await assertCliPublished(canonical.minimumCliVersion, recoveredState.targetVersion)
@@ -553,7 +553,7 @@ async function archiveFrozenAbort(originalState, preflight) {
   const abortReceiptPath = path.join(archiveDirectory, 'abort.json')
   const receipt = {
     schema: 1,
-    kind: 'deyo.frozen-release-abort',
+    kind: 'vox.frozen-release-abort',
     state: originalState,
     abortedAt: new Date().toISOString(),
     reason: 'maintainer_requested_safe_restart',
@@ -582,7 +582,7 @@ async function abortFrozenRelease(state, runtime = {}) {
     await frozenAbortPreflight(state)
   ))
   process.stdout.write(
-    `Deyo frozen release abort plan: ${state.baseVersion} -> ${state.targetVersion}; ` +
+    `Vox frozen release abort plan: ${state.baseVersion} -> ${state.targetVersion}; ` +
     'no worktree or remote refs will be changed.\n',
   )
   await progressStage('Confirm frozen release abort', async () => {
@@ -603,7 +603,7 @@ function terminalSecurityEvidence(verification, targetVersion) {
   const reasons = verification?.reasons
   const security = verification?.security
   if (
-    verification?.slug !== 'deyo' ||
+    verification?.slug !== 'vox' ||
     verification?.publisherHandle !== 'casatwy' ||
     verification?.version !== targetVersion ||
     verification?.resolvedFrom !== 'version' ||
@@ -616,7 +616,7 @@ function terminalSecurityEvidence(verification, targetVersion) {
     security?.status !== 'suspicious'
   ) {
     throw new Error(
-      `Fix-forward requires exact @casatwy/deyo@${targetVersion} terminal suspicious verification ` +
+      `Fix-forward requires exact @casatwy/vox@${targetVersion} terminal suspicious verification ` +
       'failure only for security.status_not_clean',
     )
   }
@@ -656,7 +656,7 @@ async function tagEvidence(state) {
     if (treeHash !== state.canonicalTreeHash) {
       throw new Error('Tagged artifact tree differs from the frozen canonical tree hash')
     }
-    const projected = await mkdtemp(path.join(os.tmpdir(), 'deyo-clawhub-evidence-'))
+    const projected = await mkdtemp(path.join(os.tmpdir(), 'vox-clawhub-evidence-'))
     try {
       const projection = await projectClawHubSkill(stage, projected)
       return {
@@ -764,7 +764,7 @@ async function archiveTerminalFixForward(originalState, preflight) {
   const auditPath = path.join(archiveDirectory, 'fix-forward.json')
   const audit = {
     schema: 1,
-    kind: 'deyo.terminal-security-fix-forward',
+    kind: 'vox.terminal-security-fix-forward',
     state: originalState,
     abandonedAt: new Date().toISOString(),
     reason: 'security.status_not_clean',
@@ -799,7 +799,7 @@ async function fixForwardTerminalRelease(state, runtime = {}) {
     await terminalFixForwardPreflight(state)
   ))
   process.stdout.write(
-    `Deyo terminal security fix-forward plan: ${state.targetVersion} -> ${initial.nextTarget}; ` +
+    `Vox terminal security fix-forward plan: ${state.targetVersion} -> ${initial.nextTarget}; ` +
     'the worktree, tags, ClawHub, latest, and origin/master will not be changed.\n',
   )
   await progressStage('Confirm terminal fix-forward', async () => {
@@ -842,7 +842,7 @@ async function abandonedFixForwardAudits() {
 async function authorizeAbandonedFixForwardBase({ localHead, remoteMaster, allocation, inspect }) {
   const candidates = []
   for (const audit of await abandonedFixForwardAudits()) {
-    if (audit?.schema !== 1 || audit?.kind !== 'deyo.terminal-security-fix-forward') continue
+    if (audit?.schema !== 1 || audit?.kind !== 'vox.terminal-security-fix-forward') continue
     const failed = validateTerminalFixForwardState(audit.state)
     const expectedRemoteBase = failed.remoteBaseCommit ?? failed.baseCommit
     if (
@@ -890,7 +890,7 @@ async function authorizeAbandonedFixForwardBase({ localHead, remoteMaster, alloc
 }
 
 async function prepareWorkspace(state) {
-  const manifestPath = path.join(root, 'deyo/manifest.json')
+  const manifestPath = path.join(root, 'vox/manifest.json')
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
   if (![state.baseVersion, state.targetVersion].includes(manifest.skillVersion)) {
     throw new Error(`Canonical manifest has diverged from recovery state: ${manifest.skillVersion}`)
@@ -911,7 +911,7 @@ async function prepareWorkspace(state) {
   }
   await progressStage('Generate provider artifacts', generateProviders)
   await runRepositoryValidation()
-  const canonicalTreeHash = await hashTree(path.join(root, 'deyo'))
+  const canonicalTreeHash = await hashTree(path.join(root, 'vox'))
   return await advanceState(state, 'prepared', { canonicalTreeHash })
 }
 
@@ -938,8 +938,8 @@ async function createAnnotatedTag(state) {
 }
 
 async function archiveTaggedSkill(tag) {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'deyo-tag-archive-'))
-  const archive = await command('git', ['archive', '--format=tar', tag, 'deyo'], {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'vox-tag-archive-'))
+  const archive = await command('git', ['archive', '--format=tar', tag, 'vox'], {
     forwardStdout: false,
     label: 'git archive tagged canonical skill',
   })
@@ -965,16 +965,16 @@ async function publishClawHubIfNeeded(state, stage, localFingerprint) {
   }
   const result = await textCommand(clawhub, [
     'publish', stage,
-    '--slug', 'deyo',
-    '--name', 'Deyo',
+    '--slug', 'vox',
+    '--name', 'Vox',
     '--owner', 'casatwy',
     '--version', state.targetVersion,
     '--tags', 'latest',
     '--changelog', state.releaseNotes,
-    '--source-repo', 'https://github.com/casatwy/deyo-skill',
+    '--source-repo', 'https://github.com/casatwy/vox-skill',
     '--source-commit', state.releaseCommit,
     '--source-ref', state.tag,
-    '--source-path', 'deyo',
+    '--source-path', 'vox',
     '--json',
   ], { allowFailure: true, timeoutMs: 60_000 })
   if (result.code !== 0) {
@@ -993,7 +993,7 @@ async function publishClawHubIfNeeded(state, stage, localFingerprint) {
 }
 
 async function isolatedInstallAndVerify(state, localFingerprint) {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'deyo-isolated-install-'))
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'vox-isolated-install-'))
   try {
     await textCommand(clawhub, [
       '--workdir', temporary,
@@ -1001,7 +1001,7 @@ async function isolatedInstallAndVerify(state, localFingerprint) {
       'install', officialRef,
       '--version', state.targetVersion,
     ], { timeoutMs: NETWORK_TIMEOUT_MS })
-    const installed = path.join(temporary, 'skills', 'deyo')
+    const installed = path.join(temporary, 'skills', 'vox')
     const fingerprint = (await clawHubFileFingerprint(installed)).filter(file => !file.path.startsWith('.clawhub/'))
     if (!compareFingerprints(localFingerprint, fingerprint)) throw new ClawHubConflictError('Isolated ClawHub install fingerprint mismatch')
   }
@@ -1071,9 +1071,9 @@ async function verifyRemoteProviders(state) {
   const remoteCommit = (await git(['rev-parse', 'origin/master'])).stdout.trim()
   if (remoteCommit !== state.releaseCommit) throw new Error('origin/master does not match the release commit')
   const paths = [
-    'deyo/manifest.json',
-    'plugins/deyo/.codex-plugin/plugin.json',
-    'plugins/deyo/.claude-plugin/plugin.json',
+    'vox/manifest.json',
+    'plugins/vox/.codex-plugin/plugin.json',
+    'plugins/vox/.claude-plugin/plugin.json',
     'gemini-extension.json',
     'providers/metadata.json',
   ]
@@ -1104,7 +1104,7 @@ async function completeRelease(state) {
     const receipt = {
       schema: 1,
       skillVersion: state.targetVersion,
-      minimumCliVersion: JSON.parse(await readFile(path.join(root, 'deyo/manifest.json'), 'utf8')).minimumCliVersion,
+      minimumCliVersion: JSON.parse(await readFile(path.join(root, 'vox/manifest.json'), 'utf8')).minimumCliVersion,
       releaseCommit: state.releaseCommit,
       tag: state.tag,
       canonicalTreeHash: state.canonicalTreeHash,
@@ -1149,7 +1149,7 @@ async function executeRelease(initialState, runtime = {}) {
   const canonicalStage = await progressStage('Extract immutable tag archive', async () => (
     await archiveTaggedSkill(state.tag)
   ))
-  const stage = await mkdtemp(path.join(os.tmpdir(), 'deyo-clawhub-release-'))
+  const stage = await mkdtemp(path.join(os.tmpdir(), 'vox-clawhub-release-'))
   try {
     const projection = await progressStage('Build and validate ClawHub projection', async () => {
       const archiveHash = await hashTree(canonicalStage)
@@ -1208,16 +1208,16 @@ async function runRelease(options, runtime, reporter) {
     ? 'make publish RESUME=1'
     : defaultNext)
   if (options.fixForward) {
-    if (!existingState) throw new Error('No unfinished Deyo Skill release exists to fix-forward')
+    if (!existingState) throw new Error('No unfinished Vox Skill release exists to fix-forward')
     assertFormalEnvironment(runtime)
     return await fixForwardTerminalRelease(existingState, runtime)
   }
   if (options.abort) {
-    if (!existingState) throw new Error('No unfinished Deyo Skill release exists to abort')
+    if (!existingState) throw new Error('No unfinished Vox Skill release exists to abort')
     assertFormalEnvironment(runtime)
     return await abortFrozenRelease(existingState, runtime)
   }
-  if (options.resume && !existingState) throw new Error('No unfinished Deyo Skill release exists')
+  if (options.resume && !existingState) throw new Error('No unfinished Vox Skill release exists')
   if (!options.resume && existingState) throw new Error('An unfinished release exists; use make publish RESUME=1')
   if (!options.dryRun) assertFormalEnvironment(runtime)
 
@@ -1225,7 +1225,7 @@ async function runRelease(options, runtime, reporter) {
   const targetVersion = options.resume ? preflight.state.targetVersion : preflight.allocation.targetVersion
   const baseVersion = options.resume ? preflight.state.baseVersion : preflight.allocation.baseVersion
 
-  process.stdout.write(`Deyo Skill release plan: ${baseVersion} -> ${targetVersion}\n`)
+  process.stdout.write(`Vox Skill release plan: ${baseVersion} -> ${targetVersion}\n`)
   process.stdout.write('Providers: Codex, Claude, Gemini, OpenClaw; npm CLI and web deployment excluded.\n')
   if (options.dryRun) {
     process.stdout.write('Actions: freeze state, write one version, generate providers, validate, commit, annotate tag, push tag, publish and verify ClawHub, push master, verify remote providers, write receipt.\n')
@@ -1293,16 +1293,16 @@ export async function main(argv = process.argv.slice(2), runtime = {}) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().then((receipt) => {
-    if (receipt?.kind === 'deyo.terminal-security-fix-forward') {
+    if (receipt?.kind === 'vox.terminal-security-fix-forward') {
       process.stdout.write(
-        `Archived terminal-security Deyo Skill v${receipt.state.targetVersion} release at ${receipt.archivePath}; ` +
+        `Archived terminal-security Vox Skill v${receipt.state.targetVersion} release at ${receipt.archivePath}; ` +
         `the next publish target is v${receipt.nextTarget}.\n`,
       )
     }
-    else if (receipt?.kind === 'deyo.frozen-release-abort') {
-      process.stdout.write(`Archived frozen Deyo Skill v${receipt.state.targetVersion} release at ${receipt.archivePath}.\n`)
+    else if (receipt?.kind === 'vox.frozen-release-abort') {
+      process.stdout.write(`Archived frozen Vox Skill v${receipt.state.targetVersion} release at ${receipt.archivePath}.\n`)
     }
-    else if (receipt) process.stdout.write(`Published Deyo Skill v${receipt.skillVersion}.\n`)
+    else if (receipt) process.stdout.write(`Published Vox Skill v${receipt.skillVersion}.\n`)
   }).catch((error) => {
     if (!error?.progressReported) process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
     process.exitCode = 1

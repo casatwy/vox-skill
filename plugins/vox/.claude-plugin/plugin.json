@@ -1,0 +1,20 @@
+{
+  "name": "vox",
+  "version": "0.1.0",
+  "description": "Official Vox Claude plugin for reliable link and local-media transcription through the vox CLI.",
+  "author": {
+    "name": "Vox",
+    "url": "https://github.com/casatwy"
+  },
+  "homepage": "https://vox.reka.cc/docs",
+  "repository": "https://github.com/casatwy/vox-skill",
+  "license": "UNLICENSED",
+  "keywords": [
+    "vox",
+    "transcription",
+    "cli",
+    "audio",
+    "video"
+  ],
+  "skills": "./skills/"
+}

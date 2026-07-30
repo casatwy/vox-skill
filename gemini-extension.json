@@ -1,5 +1,5 @@
 {
-  "name": "deyo",
-  "version": "1.0.11",
-  "description": "Official Deyo Gemini extension for reliable link and local-media transcription through the deyo CLI."
+  "name": "vox",
+  "version": "0.1.0",
+  "description": "Official Vox Gemini extension for reliable link and local-media transcription through the vox CLI."
 }

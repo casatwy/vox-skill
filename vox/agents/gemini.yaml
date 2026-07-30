@@ -1,0 +1,14 @@
+interface:
+  display_name: "vox"
+  short_description: "用 vox CLI 安全转写一个链接或精确本地媒体文件"
+  default_prompt: "Use the vox skill only for my explicit request to transcribe this one URL or exact local media path while preserving authentication and output safety."
+
+gemini_cli:
+  skill_id: "vox"
+  extension: "https://github.com/casatwy/vox-skill.git"
+  primary_install: "vox skill install --platform gemini"
+  notes:
+    - "只处理用户明确提供的一条 URL 或一个精确本地文件路径。"
+    - "默认省略 --language；仅在用户明确选择语言时传递。"
+    - "登录使用 vox auth login 的隐藏输入，不把 API key 写入 argv。"
+    - "要求 vox CLI 0.1.0+，普通文本使用私有终态 raw 和原子 no-clobber helper。"

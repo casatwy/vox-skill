@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
-const scriptPath = fileURLToPath(new URL('../deyo/scripts/publish-cleaned.mjs', import.meta.url))
+const scriptPath = fileURLToPath(new URL('../vox/scripts/publish-cleaned.mjs', import.meta.url))
 
 async function runPublisher(target, content) {
   return await new Promise((resolve, reject) => {
@@ -31,7 +31,7 @@ async function runPublisher(target, content) {
 }
 
 test('concurrent publishers never overwrite another cleaned result', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'deyo-publish-race-'))
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'vox-publish-race-'))
   try {
     const target = path.join(directory, 'result.txt')
     const contents = Array.from({ length: 12 }, (_, index) => `cleaned result ${index}\n`)
@@ -58,7 +58,7 @@ test('concurrent publishers never overwrite another cleaned result', async () =>
 })
 
 test('a dangling symlink occupies the requested name and remains untouched', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'deyo-publish-symlink-'))
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'vox-publish-symlink-'))
   try {
     const target = path.join(directory, 'result.txt')
     await symlink(path.join(directory, 'missing-target.txt'), target)

@@ -1,33 +1,33 @@
 {
   "schema": 1,
-  "skillVersion": "1.0.11",
-  "minimumCliVersion": "0.2.2",
-  "canonicalTreeHash": "1b4eb9bb0ac63de5b331d456fe52ea1d7740c1c4216cd75dc32034378d77a5bf",
+  "skillVersion": "0.1.0",
+  "minimumCliVersion": "0.1.0",
+  "canonicalTreeHash": "5820ac2f545a7fce47568aa63de906b183156297ded708df81252bae826943af",
   "source": {
-    "repository": "https://github.com/casatwy/deyo-skill.git",
-    "ref": "v1.0.11"
+    "repository": "https://github.com/casatwy/vox-skill.git",
+    "ref": "v0.1.0"
   },
   "providers": {
     "codex": {
-      "marketplace": "deyo-official",
-      "plugin": "deyo@deyo-official",
-      "skillPath": "plugins/deyo/skills/deyo"
+      "marketplace": "vox-official",
+      "plugin": "vox@vox-official",
+      "skillPath": "plugins/vox/skills/vox"
     },
     "claude": {
-      "marketplace": "deyo-official",
-      "plugin": "deyo@deyo-official",
-      "skillPath": "plugins/deyo/skills/deyo"
+      "marketplace": "vox-official",
+      "plugin": "vox@vox-official",
+      "skillPath": "plugins/vox/skills/vox"
     },
     "gemini": {
-      "extension": "deyo",
-      "skillPath": "skills/deyo"
+      "extension": "vox",
+      "skillPath": "skills/vox"
     },
     "openclaw": {
-      "registry": "@casatwy/deyo",
+      "registry": "@casatwy/vox",
       "license": "MIT-0",
-      "skillPath": "deyo",
+      "skillPath": "vox",
       "artifactProjection": "openclaw-v2",
-      "projectionSince": "1.0.11",
+      "projectionSince": "0.1.0",
       "excludedPaths": [
         "agents/**",
         "scripts/openclaw-auto-update.mjs"
@@ -35,7 +35,7 @@
       "userInvocable": true,
       "disableModelInvocation": true,
       "requiresBins": [
-        "deyo",
+        "vox",
         "openclaw"
       ],
       "updateTransport": "npm-cli"

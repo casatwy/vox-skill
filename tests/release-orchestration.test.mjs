@@ -73,7 +73,7 @@ const { spawnSync } = require('node:child_process')
 const args = process.argv.slice(2)
 fs.appendFileSync(process.env.MOCK_GIT_LOG, JSON.stringify(args) + '\\n')
 if (args.join(' ') === 'remote get-url origin') {
-  process.stdout.write('git@github.com:casatwy/deyo-skill.git\\n')
+  process.stdout.write('git@github.com:casatwy/vox-skill.git\\n')
   process.exit(0)
 }
 const failKind = process.env.MOCK_GIT_FAIL_KIND || ''
@@ -213,7 +213,7 @@ if (args[0] === 'skill' && args[1] === 'verify') {
   if (mode.startsWith('terminal')) {
     const requested = args[args.indexOf('--version') + 1]
     process.stdout.write(JSON.stringify({
-      slug: 'deyo',
+      slug: 'vox',
       publisherHandle: 'casatwy',
       version: mode === 'terminal-wrong-version' ? '9.9.9' : requested,
       resolvedFrom: 'version',
@@ -246,7 +246,7 @@ if (args[0] === 'skill' && args[1] === 'verify') {
 if (args.includes('install') && args.includes('--workdir')) {
   const workdir = args[args.indexOf('--workdir') + 1]
   const directory = args[args.indexOf('--dir') + 1]
-  const target = path.join(workdir, directory, 'deyo')
+  const target = path.join(workdir, directory, 'vox')
   fs.mkdirSync(path.dirname(target), { recursive: true })
   fs.cpSync(snapshotPath, target, { recursive: true, dereference: false })
   fs.mkdirSync(path.join(target, '.clawhub'), { recursive: true })
@@ -274,7 +274,7 @@ if (command === 'npm' && args[0] === 'view') {
 if (command === 'pnpm') {
   const failTarget = process.env.MOCK_PNPM_FAIL_ON_TARGET
   if (failTarget) {
-    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'deyo', 'manifest.json'), 'utf8'))
+    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'vox', 'manifest.json'), 'utf8'))
     const expectedVersion = failTarget === '1' ? '1.0.9' : failTarget
     if (manifest.skillVersion === expectedVersion) {
       process.stderr.write('simulated provider E2E failure after freeze\\n')
@@ -318,7 +318,7 @@ catch (error) {
 
 async function createFixture() {
   const temporaryRoot = await realpath(os.tmpdir())
-  const parent = await mkdtemp(path.join(temporaryRoot, 'deyo-release-e2e-'))
+  const parent = await mkdtemp(path.join(temporaryRoot, 'vox-release-e2e-'))
   const repo = path.join(parent, 'skill')
   const remote = path.join(parent, 'remote.git')
   const bin = path.join(parent, 'bin')
@@ -344,7 +344,7 @@ async function createFixture() {
   await symlink(path.join(sourceRoot, 'node_modules', 'yaml'), path.join(repo, 'node_modules', 'yaml'))
   await writeFile(path.join(repo, 'tests', '__release-runner.mjs'), importedRunner, 'utf8')
 
-  const manifestPath = path.join(repo, 'deyo', 'manifest.json')
+  const manifestPath = path.join(repo, 'vox', 'manifest.json')
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
   manifest.skillVersion = '1.0.8'
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
@@ -356,7 +356,7 @@ async function createFixture() {
 
   const setupEnv = { ...process.env }
   await checked(realGit, ['init', '-b', 'master'], { cwd: repo, env: setupEnv })
-  await checked(realGit, ['config', 'user.name', 'Deyo Release Test'], { cwd: repo, env: setupEnv })
+  await checked(realGit, ['config', 'user.name', 'Vox Release Test'], { cwd: repo, env: setupEnv })
   await checked(realGit, ['config', 'user.email', 'release-test@example.invalid'], { cwd: repo, env: setupEnv })
   await checked(realGit, ['config', 'commit.gpgsign', 'false'], { cwd: repo, env: setupEnv })
   await checked(realGit, ['config', 'tag.gpgsign', 'false'], { cwd: repo, env: setupEnv })
@@ -384,12 +384,12 @@ async function createFixture() {
     remote,
     realGit,
     env,
-    statePath: path.join(repo, '.git', 'deyo-release', 'state.json'),
-    abortedDirectory: path.join(repo, '.git', 'deyo-release', 'aborted'),
-    abandonedDirectory: path.join(repo, '.git', 'deyo-release', 'abandoned'),
-    receiptPath: path.join(repo, '.git', 'deyo-release', 'receipts', 'v1.0.9.json'),
+    statePath: path.join(repo, '.git', 'vox-release', 'state.json'),
+    abortedDirectory: path.join(repo, '.git', 'vox-release', 'aborted'),
+    abandonedDirectory: path.join(repo, '.git', 'vox-release', 'abandoned'),
+    receiptPath: path.join(repo, '.git', 'vox-release', 'receipts', 'v1.0.9.json'),
     receiptPathFor(version) {
-      return path.join(repo, '.git', 'deyo-release', 'receipts', `v${version}.json`)
+      return path.join(repo, '.git', 'vox-release', 'receipts', `v${version}.json`)
     },
     async cli(args, extraEnv = {}) {
       return await run(process.execPath, [path.join(repo, 'scripts', 'release.mjs'), ...args], {
@@ -445,14 +445,14 @@ async function writeFrozenState(fixture, overrides = {}) {
 
 async function createPartiallyPreparedFrozenRelease(fixture) {
   const result = await fixture.formal([], {
-    MOCK_CONFIRM: 'publish deyo v1.0.9',
+    MOCK_CONFIRM: 'publish vox v1.0.9',
     MOCK_PNPM_FAIL_ON_TARGET: '1',
   })
   assert.equal(result.code, 1)
   assert.match(result.stderr, /simulated provider E2E failure after freeze/)
   const frozen = await readJson(fixture.statePath)
   assert.equal(frozen.phase, 'frozen')
-  assert.equal(JSON.parse(await readFile(path.join(fixture.repo, 'deyo', 'manifest.json'), 'utf8')).skillVersion, '1.0.9')
+  assert.equal(JSON.parse(await readFile(path.join(fixture.repo, 'vox', 'manifest.json'), 'utf8')).skillVersion, '1.0.9')
   await access(path.join(fixture.repo, 'release', 'notes', 'v1.0.9.md'))
   await writeFile(path.join(fixture.repo, 'tests', 'after-freeze-source-change.txt'), 'fixed after freeze\n')
   return frozen
@@ -460,7 +460,7 @@ async function createPartiallyPreparedFrozenRelease(fixture) {
 
 async function createTerminalSecurityRelease(fixture) {
   const result = await fixture.formal([], {
-    MOCK_CONFIRM: 'publish deyo v1.0.9',
+    MOCK_CONFIRM: 'publish vox v1.0.9',
     MOCK_CLAWHUB_VERIFY: 'terminal',
     MOCK_REVIEW_TIMEOUT_MS: '0',
   })
@@ -476,18 +476,18 @@ async function createFixForwardAheadFrozenRelease(fixture) {
   const failed = await createTerminalSecurityRelease(fixture)
   const remoteBase = (await fixture.git(['rev-parse', 'origin/master'])).stdout.trim()
   const abandoned = await fixture.formal(['--fix-forward'], {
-    MOCK_CONFIRM: 'fix-forward deyo v1.0.9 to v1.0.10',
+    MOCK_CONFIRM: 'fix-forward vox v1.0.9 to v1.0.10',
     MOCK_CLAWHUB_VERIFY: 'terminal',
   })
   assert.equal(abandoned.code, 0, abandoned.stderr)
 
-  const canonicalPath = path.join(fixture.repo, 'deyo', 'SKILL.md')
+  const canonicalPath = path.join(fixture.repo, 'vox', 'SKILL.md')
   await writeFile(canonicalPath, `${await readFile(canonicalPath, 'utf8')}\n<!-- simulated abortable fix-forward -->\n`)
   await writeFile(path.join(fixture.repo, 'release', 'next.md'), '# Abortable fix-forward\n')
   await checked(process.execPath, ['scripts/generate-providers.mjs'], { cwd: fixture.repo, env: process.env })
 
   const result = await fixture.formal([], {
-    MOCK_CONFIRM: 'publish deyo v1.0.10',
+    MOCK_CONFIRM: 'publish vox v1.0.10',
     MOCK_PNPM_FAIL_ON_TARGET: '1.0.10',
   })
   assert.equal(result.code, 1)
@@ -506,7 +506,7 @@ test('release dry-run computes 1.0.9 and performs zero repository writes', { tim
   try {
     const headBefore = (await fixture.git(['rev-parse', 'HEAD'])).stdout.trim()
     const statusBefore = (await fixture.git(['status', '--porcelain'])).stdout
-    const manifestBefore = await readFile(path.join(fixture.repo, 'deyo', 'manifest.json'), 'utf8')
+    const manifestBefore = await readFile(path.join(fixture.repo, 'vox', 'manifest.json'), 'utf8')
     const result = await fixture.cli(['--dry-run'])
     assert.equal(result.code, 0, result.stderr)
     assert.match(result.stderr, /\[release\] MODE dry-run/)
@@ -515,13 +515,13 @@ test('release dry-run computes 1.0.9 and performs zero repository writes', { tim
     assert.doesNotMatch(result.stderr, /\u001B\[/)
     const npmCommands = (await readFile(fixture.env.MOCK_NPM_LOG, 'utf8'))
       .trim().split('\n').map(line => JSON.parse(line))
-    assert.deepEqual(npmCommands.at(-1), ['view', '@casatwy/deyo@^0.2.2', 'version', '--json'])
+    assert.deepEqual(npmCommands.at(-1), ['view', '@casatwy/vox@^0.1.0', 'version', '--json'])
     assert.match(result.stdout, /"0\.2\.3"/)
     assert.match(result.stdout, /1\.0\.8 -> 1\.0\.9/)
     assert.match(result.stdout, /No files, state, commits, tags, pushes, or publications/)
     assert.equal((await fixture.git(['rev-parse', 'HEAD'])).stdout.trim(), headBefore)
     assert.equal((await fixture.git(['status', '--porcelain'])).stdout, statusBefore)
-    assert.equal(await readFile(path.join(fixture.repo, 'deyo', 'manifest.json'), 'utf8'), manifestBefore)
+    assert.equal(await readFile(path.join(fixture.repo, 'vox', 'manifest.json'), 'utf8'), manifestBefore)
     assert.equal((await fixture.git(['tag', '--list'])).stdout, '')
     await assertMissing(fixture.statePath)
     await assertMissing(path.join(fixture.env.MOCK_CLAWHUB_STATE, 'published.json'))
@@ -584,13 +584,13 @@ test('guarded abort archives a source-mismatched partial freeze and normal publi
   try {
     const frozen = await createPartiallyPreparedFrozenRelease(fixture)
     const statusBefore = (await fixture.git(['status', '--porcelain'])).stdout
-    const aborted = await fixture.formal(['--abort'], { MOCK_CONFIRM: 'abort deyo v1.0.9' })
+    const aborted = await fixture.formal(['--abort'], { MOCK_CONFIRM: 'abort vox v1.0.9' })
     assert.equal(aborted.code, 0, aborted.stderr)
     assert.match(aborted.stderr, /\[release\] MODE abort/)
     assert.match(aborted.stderr, /\[release\] OK Archive frozen release state/)
     assert.match(aborted.stdout, /no worktree or remote refs will be changed/)
     const receipt = JSON.parse(aborted.stdout.trim().split('\n').at(-1))
-    assert.equal(receipt.kind, 'deyo.frozen-release-abort')
+    assert.equal(receipt.kind, 'vox.frozen-release-abort')
     assert.equal(receipt.reason, 'maintainer_requested_safe_restart')
     assert.notEqual(receipt.currentSourceSnapshot, frozen.sourceSnapshot)
     await assertMissing(fixture.statePath)
@@ -609,7 +609,7 @@ test('guarded abort archives a source-mismatched partial freeze and normal publi
     assert.equal((await stat(path.join(fixture.repo, receipt.archivePath))).mode & 0o777, 0o600)
     assert.equal((await stat(path.join(fixture.repo, receipt.archivedStatePath))).mode & 0o777, 0o600)
 
-    const restarted = await fixture.formal([], { MOCK_CONFIRM: 'publish deyo v1.0.9' })
+    const restarted = await fixture.formal([], { MOCK_CONFIRM: 'publish vox v1.0.9' })
     assert.equal(restarted.code, 0, restarted.stderr)
     assert.match(restarted.stdout, /1\.0\.8 -> 1\.0\.9/)
     assert.equal((await readJson(fixture.receiptPath)).skillVersion, '1.0.9')
@@ -625,10 +625,10 @@ test('guarded abort preserves a fix-forward remote base and restarts the same ta
   try {
     const { failed, frozen, remoteBase } = await createFixForwardAheadFrozenRelease(fixture)
     const statusBefore = (await fixture.git(['status', '--porcelain'])).stdout
-    const aborted = await fixture.formal(['--abort'], { MOCK_CONFIRM: 'abort deyo v1.0.10' })
+    const aborted = await fixture.formal(['--abort'], { MOCK_CONFIRM: 'abort vox v1.0.10' })
     assert.equal(aborted.code, 0, aborted.stderr)
     const audit = JSON.parse(aborted.stdout.trim().split('\n').at(-1))
-    assert.equal(audit.kind, 'deyo.frozen-release-abort')
+    assert.equal(audit.kind, 'vox.frozen-release-abort')
     assert.equal(audit.remoteMaster, remoteBase)
     assert.equal(audit.state.remoteBaseCommit, remoteBase)
     assert.equal(audit.state.baseCommit, failed.releaseCommit)
@@ -638,7 +638,7 @@ test('guarded abort preserves a fix-forward remote base and restarts the same ta
     assert.equal((await fixture.git(['rev-parse', 'origin/master'])).stdout.trim(), remoteBase)
     assert.equal((await fixture.git(['tag', '--list', 'v1.0.10'])).stdout, '')
 
-    const restarted = await fixture.formal([], { MOCK_CONFIRM: 'publish deyo v1.0.10' })
+    const restarted = await fixture.formal([], { MOCK_CONFIRM: 'publish vox v1.0.10' })
     assert.equal(restarted.code, 0, restarted.stderr)
     const receipt = await readJson(fixture.receiptPathFor('1.0.10'))
     assert.equal(receipt.skillVersion, '1.0.10')
@@ -657,7 +657,7 @@ test('guarded abort rejects drift from a fix-forward remote base', { timeout: 60
   try {
     const { frozen } = await createFixForwardAheadFrozenRelease(fixture)
     await fixture.git(['push', 'origin', `${frozen.baseCommit}:refs/heads/master`])
-    const aborted = await fixture.formal(['--abort'], { MOCK_CONFIRM: 'abort deyo v1.0.10' })
+    const aborted = await fixture.formal(['--abort'], { MOCK_CONFIRM: 'abort vox v1.0.10' })
     assert.equal(aborted.code, 1)
     assert.match(aborted.stderr, /origin\/master no longer matches the frozen base commit/)
     assert.deepEqual(await readJson(fixture.statePath), frozen)
@@ -706,7 +706,7 @@ test('guarded abort rejects phase, tag, exact-version, Git drift, confirmation, 
         if (scenario.name === 'non-tty') result = await fixture.cli(['--abort'])
         else {
           result = await fixture.formal(['--abort'], {
-            MOCK_CONFIRM: scenario.name === 'confirmation' ? 'wrong' : 'abort deyo v1.0.9',
+            MOCK_CONFIRM: scenario.name === 'confirmation' ? 'wrong' : 'abort vox v1.0.9',
             ...(scenario.name === 'ci' ? { CI: 'true' } : {}),
             ...(scenario.name === 'exact' ? { MOCK_CLAWHUB_EXACT_TARGET: '1.0.9' } : {}),
           })
@@ -730,7 +730,7 @@ test('terminal security fix-forward archives 1.0.9 and activates only pass-clean
     const remoteBase = (await fixture.git(['rev-parse', 'origin/master'])).stdout.trim()
     const statusBefore = (await fixture.git(['status', '--porcelain'])).stdout
     const fixedForward = await fixture.formal(['--fix-forward'], {
-      MOCK_CONFIRM: 'fix-forward deyo v1.0.9 to v1.0.10',
+      MOCK_CONFIRM: 'fix-forward vox v1.0.9 to v1.0.10',
       MOCK_CLAWHUB_VERIFY: 'terminal',
     })
     assert.equal(fixedForward.code, 0, fixedForward.stderr)
@@ -738,7 +738,7 @@ test('terminal security fix-forward archives 1.0.9 and activates only pass-clean
     assert.match(fixedForward.stderr, /\[release\] OK Archive terminal fix-forward state/)
     assert.match(fixedForward.stdout, /worktree, tags, ClawHub, latest, and origin\/master will not be changed/)
     const auditResult = JSON.parse(fixedForward.stdout.trim().split('\n').at(-1))
-    assert.equal(auditResult.kind, 'deyo.terminal-security-fix-forward')
+    assert.equal(auditResult.kind, 'vox.terminal-security-fix-forward')
     assert.equal(auditResult.nextTarget, '1.0.10')
     assert.equal(auditResult.reason, 'security.status_not_clean')
     assert.equal(auditResult.terminalSecurity.security.signals.staticScan.scanId, 'scan-terminal-1')
@@ -757,17 +757,17 @@ test('terminal security fix-forward archives 1.0.9 and activates only pass-clean
     assert.deepEqual((await readJson(auditPath)).state, failed)
     assert.deepEqual(await readJson(archivedStatePath), failed)
 
-    const canonicalPath = path.join(fixture.repo, 'deyo', 'SKILL.md')
+    const canonicalPath = path.join(fixture.repo, 'vox', 'SKILL.md')
     await writeFile(canonicalPath, `${await readFile(canonicalPath, 'utf8')}\n<!-- simulated terminal-security fix -->\n`)
     await writeFile(path.join(fixture.repo, 'release', 'next.md'), '# Security fix-forward\n\n- Narrow terminal behavior.\n')
     await checked(process.execPath, ['scripts/generate-providers.mjs'], { cwd: fixture.repo, env: process.env })
 
-    const fixed = await fixture.formal([], { MOCK_CONFIRM: 'publish deyo v1.0.10' })
+    const fixed = await fixture.formal([], { MOCK_CONFIRM: 'publish vox v1.0.10' })
     assert.equal(fixed.code, 0, fixed.stderr)
     const receipt = await readJson(fixture.receiptPathFor('1.0.10'))
     assert.equal(receipt.skillVersion, '1.0.10')
-    assert.equal(receipt.minimumCliVersion, '0.2.2')
-    assert.equal(receipt.clawHubProjectionKind, 'openclaw-v1')
+    assert.equal(receipt.minimumCliVersion, '0.1.0')
+    assert.equal(receipt.clawHubProjectionKind, 'openclaw-v2')
     assert.match(receipt.clawHubProjectionTreeHash, /^[a-f0-9]{64}$/)
     assert.notEqual(receipt.clawHubProjectionTreeHash, receipt.canonicalTreeHash)
     const snapshot = path.join(fixture.env.MOCK_CLAWHUB_STATE, 'snapshot')
@@ -776,10 +776,10 @@ test('terminal security fix-forward archives 1.0.9 and activates only pass-clean
     assert.match(projectedSkill, /^user-invocable: true$/m)
     assert.match(projectedSkill, /^disable-model-invocation: true$/m)
     assert.doesNotMatch(projectedSkill, /--language zh\b/)
-    await fixture.git(['show', 'v1.0.10:deyo/agents/openai.yaml'])
+    await fixture.git(['show', 'v1.0.10:vox/agents/openai.yaml'])
     const providerMetadata = await readJson(path.join(fixture.repo, 'providers', 'metadata.json'))
     assert.equal(providerMetadata.canonicalTreeHash, receipt.canonicalTreeHash)
-    assert.equal(providerMetadata.providers.openclaw.artifactProjection, 'openclaw-v1')
+    assert.equal(providerMetadata.providers.openclaw.artifactProjection, 'openclaw-v2')
     const newHead = (await fixture.git(['rev-parse', 'HEAD'])).stdout.trim()
     assert.equal((await fixture.git(['rev-parse', 'origin/master'])).stdout.trim(), newHead)
     assert.equal((await fixture.git(['rev-parse', 'HEAD^'])).stdout.trim(), failed.releaseCommit)
@@ -797,18 +797,18 @@ test('successive terminal releases preserve the original remote base and fix-for
     const failed109 = await createTerminalSecurityRelease(fixture)
     const remoteBase = (await fixture.git(['rev-parse', 'origin/master'])).stdout.trim()
     const abandoned109 = await fixture.formal(['--fix-forward'], {
-      MOCK_CONFIRM: 'fix-forward deyo v1.0.9 to v1.0.10',
+      MOCK_CONFIRM: 'fix-forward vox v1.0.9 to v1.0.10',
       MOCK_CLAWHUB_VERIFY: 'terminal',
     })
     assert.equal(abandoned109.code, 0, abandoned109.stderr)
 
-    const canonicalPath = path.join(fixture.repo, 'deyo', 'SKILL.md')
+    const canonicalPath = path.join(fixture.repo, 'vox', 'SKILL.md')
     await writeFile(canonicalPath, `${await readFile(canonicalPath, 'utf8')}\n<!-- simulated first security fix -->\n`)
     await writeFile(path.join(fixture.repo, 'release', 'next.md'), '# First security fix-forward\n')
     await checked(process.execPath, ['scripts/generate-providers.mjs'], { cwd: fixture.repo, env: process.env })
 
     const failed110Result = await fixture.formal([], {
-      MOCK_CONFIRM: 'publish deyo v1.0.10',
+      MOCK_CONFIRM: 'publish vox v1.0.10',
       MOCK_CLAWHUB_VERIFY: 'terminal',
       MOCK_REVIEW_TIMEOUT_MS: '0',
     })
@@ -822,7 +822,7 @@ test('successive terminal releases preserve the original remote base and fix-for
     assert.equal((await fixture.git(['rev-parse', 'origin/master'])).stdout.trim(), remoteBase)
 
     const abandoned110 = await fixture.formal(['--fix-forward'], {
-      MOCK_CONFIRM: 'fix-forward deyo v1.0.10 to v1.0.11',
+      MOCK_CONFIRM: 'fix-forward vox v1.0.10 to v1.0.11',
       MOCK_CLAWHUB_VERIFY: 'terminal',
     })
     assert.equal(abandoned110.code, 0, abandoned110.stderr)
@@ -834,7 +834,7 @@ test('successive terminal releases preserve the original remote base and fix-for
     await writeFile(path.join(fixture.repo, 'release', 'next.md'), '# Second security fix-forward\n')
     await checked(process.execPath, ['scripts/generate-providers.mjs'], { cwd: fixture.repo, env: process.env })
 
-    const fixed111 = await fixture.formal([], { MOCK_CONFIRM: 'publish deyo v1.0.11' })
+    const fixed111 = await fixture.formal([], { MOCK_CONFIRM: 'publish vox v1.0.11' })
     assert.equal(fixed111.code, 0, fixed111.stderr)
     const receipt = await readJson(fixture.receiptPathFor('1.0.11'))
     assert.equal(receipt.skillVersion, '1.0.11')
@@ -890,7 +890,7 @@ test('terminal security fix-forward rejects unsafe state, evidence, environment,
     } },
     { name: 'fingerprint', expected: /different artifact fingerprint/, env: { MOCK_CLAWHUB_FINGERPRINT_MISMATCH: '1' } },
     { name: 'verdict', expected: /terminal suspicious verification failure only/, env: { MOCK_CLAWHUB_VERIFY: 'terminal-extra' } },
-    { name: 'verdict-identity', expected: /exact @casatwy\/deyo@1\.0\.9/, env: { MOCK_CLAWHUB_VERIFY: 'terminal-wrong-version' } },
+    { name: 'verdict-identity', expected: /exact @casatwy\/vox@1\.0\.9/, env: { MOCK_CLAWHUB_VERIFY: 'terminal-wrong-version' } },
     { name: 'verdict-status', expected: /terminal suspicious verification/, env: { MOCK_CLAWHUB_VERIFY: 'terminal-unknown-status' } },
     { name: 'latest', expected: /latest is not/, env: { MOCK_CLAWHUB_LATEST: '1.0.8' } },
     { name: 'higher', expected: /highest version/, env: { MOCK_CLAWHUB_HIGHER: '1' } },
@@ -910,7 +910,7 @@ test('terminal security fix-forward rejects unsafe state, evidence, environment,
           ? await fixture.cli(['--fix-forward'], env)
           : await fixture.formal(['--fix-forward'], {
               ...env,
-              MOCK_CONFIRM: scenario.confirm || 'fix-forward deyo v1.0.9 to v1.0.10',
+              MOCK_CONFIRM: scenario.confirm || 'fix-forward vox v1.0.9 to v1.0.10',
             })
         assert.equal(result.code, 1, result.stderr)
         assert.match(result.stderr, scenario.expected)
@@ -935,20 +935,20 @@ test('formal release rejects environment, confirmation, auth, and npm prerequisi
         else if (scenario === 'confirmation') result = await fixture.formal([], { MOCK_CONFIRM: 'wrong' })
         else if (scenario === 'auth') result = await fixture.cli(['--dry-run'], { MOCK_CLAWHUB_ACCOUNT: 'someone-else' })
         else if (scenario === 'npm') result = await fixture.cli(['--dry-run'], { MOCK_NPM_FAIL: '1' })
-        else result = await fixture.cli(['--dry-run'], { MOCK_NPM_VERSION: '0.2.1' })
+        else result = await fixture.cli(['--dry-run'], { MOCK_NPM_VERSION: '0.0.9' })
         assert.equal(result.code, 1)
         if (scenario === 'non-tty') assert.match(result.stderr, /interactive TTY/)
         if (scenario === 'ci') assert.match(result.stderr, /forbidden in CI/)
         if (scenario === 'confirmation') assert.match(result.stderr, /confirmation mismatch/)
         if (scenario === 'auth') assert.match(result.stderr, /login must be casatwy/)
         if (scenario === 'npm') {
-          assert.match(result.stderr, /published @casatwy\/deyo version satisfying \^0\.2\.2 is required/)
+          assert.match(result.stderr, /published @casatwy\/vox version satisfying \^0\.1\.0 is required/)
           assert.match(result.stderr, /FAIL Verify minimum npm CLI version \([^\n]+; exit=42\)/)
           assert.match(result.stderr, /FAILURE stage=Verify minimum npm CLI version; exit=42; recovery_phase=none/)
           assert.equal(result.stderr.match(/simulated npm lookup failure/g)?.length, 1)
         }
         if (scenario === 'npm-old') {
-          assert.match(result.stderr, /Published @casatwy\/deyo 0\.2\.1 does not satisfy minimum CLI 0\.2\.2/)
+          assert.match(result.stderr, /Published @casatwy\/vox 0\.0\.9 does not satisfy minimum CLI 0\.1\.0/)
           assert.match(result.stderr, /FAILURE stage=Verify minimum npm CLI version; recovery_phase=none/)
         }
         await assertMissing(fixture.statePath)
@@ -965,7 +965,7 @@ test('ambiguous ClawHub publish is reconciled and receipt records exact notes an
   const fixture = await createFixture()
   try {
     const result = await fixture.formal([], {
-      MOCK_CONFIRM: 'publish deyo v1.0.9',
+      MOCK_CONFIRM: 'publish vox v1.0.9',
       MOCK_CLAWHUB_AMBIGUOUS: '1',
     })
     assert.equal(result.code, 0, result.stderr)
@@ -976,8 +976,8 @@ test('ambiguous ClawHub publish is reconciled and receipt records exact notes an
     const archived = await readFile(archivedPath, 'utf8')
     assert.equal(receipt.skillVersion, '1.0.9')
     assert.equal(receipt.clawHubLicense, 'MIT-0')
-    assert.equal(receipt.clawHubProjectionKind, 'legacy-full')
-    assert.equal(receipt.clawHubProjectionTreeHash, receipt.canonicalTreeHash)
+    assert.equal(receipt.clawHubProjectionKind, 'openclaw-v2')
+    assert.notEqual(receipt.clawHubProjectionTreeHash, receipt.canonicalTreeHash)
     assert.equal(receipt.releaseNotesPath, 'release/notes/v1.0.9.md')
     assert.equal(receipt.releaseNotes, archived)
     assert.equal(receipt.releaseNotesHash, (await import('../scripts/release-core.mjs')).sha256(archived))
@@ -997,7 +997,7 @@ test('pending review preserves one version and RESUME completes without republis
   const fixture = await createFixture()
   try {
     const pending = await fixture.formal([], {
-      MOCK_CONFIRM: 'publish deyo v1.0.9',
+      MOCK_CONFIRM: 'publish vox v1.0.9',
       MOCK_CLAWHUB_VERIFY: 'pending',
       MOCK_REVIEW_TIMEOUT_MS: '0',
     })
@@ -1008,7 +1008,7 @@ test('pending review preserves one version and RESUME completes without republis
     assert.match(pending.stderr, /next="make publish RESUME=1"/)
     assert.equal((await readJson(fixture.statePath)).phase, 'tag_pushed')
     const resumed = await fixture.formal(['--resume'], {
-      MOCK_CONFIRM: 'resume deyo v1.0.9',
+      MOCK_CONFIRM: 'resume vox v1.0.9',
     })
     assert.equal(resumed.code, 0, resumed.stderr)
     assert.match(resumed.stderr, /\[release\] MODE resume/)
@@ -1033,7 +1033,7 @@ test('tag and master push failures retain phase and resume the same release', { 
       const fixture = await createFixture()
       try {
         const failed = await fixture.formal([], {
-          MOCK_CONFIRM: 'publish deyo v1.0.9',
+          MOCK_CONFIRM: 'publish vox v1.0.9',
           MOCK_GIT_FAIL_KIND: failure.kind,
         })
         assert.equal(failed.code, 1)
@@ -1047,7 +1047,7 @@ test('tag and master push failures retain phase and resume the same release', { 
         )
         assert.equal((await readJson(fixture.statePath)).phase, failure.phase)
         const resumed = await fixture.formal(['--resume'], {
-          MOCK_CONFIRM: 'resume deyo v1.0.9',
+          MOCK_CONFIRM: 'resume vox v1.0.9',
         })
         assert.equal(resumed.code, 0, resumed.stderr)
         assert.equal((await readJson(fixture.receiptPath)).skillVersion, '1.0.9')
@@ -1064,7 +1064,7 @@ test('clawhub-ready resume rejects projection evidence drift before activating m
   const fixture = await createFixture()
   try {
     const failed = await fixture.formal([], {
-      MOCK_CONFIRM: 'publish deyo v1.0.9',
+      MOCK_CONFIRM: 'publish vox v1.0.9',
       MOCK_GIT_FAIL_KIND: 'master',
     })
     assert.equal(failed.code, 1)
@@ -1075,7 +1075,7 @@ test('clawhub-ready resume rejects projection evidence drift before activating m
     await writeFile(fixture.statePath, `${JSON.stringify(state, null, 2)}\n`)
 
     const resumed = await fixture.formal(['--resume'], {
-      MOCK_CONFIRM: 'resume deyo v1.0.9',
+      MOCK_CONFIRM: 'resume vox v1.0.9',
     })
     assert.equal(resumed.code, 1)
     assert.match(resumed.stderr, /projection tree hash differs/)

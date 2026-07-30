@@ -2,8 +2,8 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { compareSemver, hashTree } from './release-core.mjs'
 
-export const OPENCLAW_PROJECTION_SINCE = '1.0.10'
-export const OPENCLAW_V2_PROJECTION_SINCE = '1.0.11'
+export const OPENCLAW_PROJECTION_SINCE = '0.1.0'
+export const OPENCLAW_V2_PROJECTION_SINCE = '0.1.0'
 
 export function usesOpenClawProjection(version) {
   return compareSemver(version, OPENCLAW_PROJECTION_SINCE) >= 0
@@ -40,7 +40,7 @@ export function addOpenClawV2Frontmatter(content) {
     '  openclaw:',
     '    requires:',
     '      bins:',
-    '        - deyo',
+    '        - vox',
     '        - openclaw',
   ].join('\n')
   return invoked.replace(match[0], `---\n${projectedFrontmatter}\n---\n`)

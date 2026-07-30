@@ -5,10 +5,10 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { assertStableSemver, compareSemver, describeTree, hashTree } from './release-core.mjs'
+import { assertStableSemver, describeTree, hashTree } from './release-core.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const canonicalDirectory = path.join(root, 'deyo')
+const canonicalDirectory = path.join(root, 'vox')
 const GENERATED_DIRECTORIES = ['.agents', '.claude-plugin', 'plugins', 'providers', 'skills']
 const CANONICAL_LAYOUT = new Map([
   ['SKILL.md', 'file'],
@@ -30,7 +30,7 @@ async function readManifest(sourceDirectory) {
   assertStableSemver(manifest.skillVersion, 'canonical skill version')
   assertStableSemver(manifest.minimumCliVersion, 'minimum CLI version')
   if (Object.keys(manifest).sort().join(',') !== 'minimumCliVersion,skillVersion') {
-    throw new Error('deyo/manifest.json must contain only skillVersion and minimumCliVersion')
+    throw new Error('vox/manifest.json must contain only skillVersion and minimumCliVersion')
   }
   return manifest
 }
@@ -53,12 +53,12 @@ export async function assertCanonicalLayout(sourceDirectory = canonicalDirectory
   for (const entry of entries) {
     const expectedType = CANONICAL_LAYOUT.get(entry.path)
     if (!expectedType || expectedType !== entry.type) {
-      throw new Error(`Unexpected canonical Deyo entry: ${entry.path} (${entry.type})`)
+      throw new Error(`Unexpected canonical Vox entry: ${entry.path} (${entry.type})`)
     }
   }
   for (const [expectedPath, expectedType] of CANONICAL_LAYOUT) {
     if (actual.get(expectedPath) !== expectedType) {
-      throw new Error(`Missing canonical Deyo entry: ${expectedPath} (${expectedType})`)
+      throw new Error(`Missing canonical Vox entry: ${expectedPath} (${expectedType})`)
     }
   }
 }
@@ -68,89 +68,77 @@ export async function generateProviders(outputRoot = root, sourceDirectory = can
   const manifest = await readManifest(sourceDirectory)
   const version = manifest.skillVersion
   const canonicalTreeHash = await hashTree(sourceDirectory)
-  const openClawProjection = compareSemver(version, '1.0.11') >= 0
-    ? {
-        artifactProjection: 'openclaw-v2',
-        projectionSince: '1.0.11',
-        excludedPaths: ['agents/**', 'scripts/openclaw-auto-update.mjs'],
-        userInvocable: true,
-        disableModelInvocation: true,
-        requiresBins: ['deyo', 'openclaw'],
-        updateTransport: 'npm-cli',
-      }
-    : compareSemver(version, '1.0.10') >= 0
-      ? {
-          artifactProjection: 'openclaw-v1',
-          projectionSince: '1.0.10',
-          excludedPaths: ['agents/**'],
-          userInvocable: true,
-          disableModelInvocation: true,
-        }
-      : {
-          artifactProjection: 'legacy-full',
-        }
+  const openClawProjection = {
+    artifactProjection: 'openclaw-v2',
+    projectionSince: '0.1.0',
+    excludedPaths: ['agents/**', 'scripts/openclaw-auto-update.mjs'],
+    userInvocable: true,
+    disableModelInvocation: true,
+    requiresBins: ['vox', 'openclaw'],
+    updateTransport: 'npm-cli',
+  }
 
   for (const directory of GENERATED_DIRECTORIES) {
     await rm(path.join(outputRoot, directory), { recursive: true, force: true })
   }
   await rm(path.join(outputRoot, 'gemini-extension.json'), { force: true })
 
-  await replaceDirectory(sourceDirectory, path.join(outputRoot, 'plugins/deyo/skills/deyo'))
-  await replaceDirectory(sourceDirectory, path.join(outputRoot, 'skills/deyo'))
+  await replaceDirectory(sourceDirectory, path.join(outputRoot, 'plugins/vox/skills/vox'))
+  await replaceDirectory(sourceDirectory, path.join(outputRoot, 'skills/vox'))
 
-  await writeJson(path.join(outputRoot, 'plugins/deyo/.codex-plugin/plugin.json'), {
-    name: 'deyo',
+  await writeJson(path.join(outputRoot, 'plugins/vox/.codex-plugin/plugin.json'), {
+    name: 'vox',
     version,
-    description: 'Official Deyo plugin for reliable link and local-media transcription through the deyo CLI.',
+    description: 'Official Vox plugin for reliable link and local-media transcription through the vox CLI.',
     author: {
-      name: 'Deyo',
+      name: 'Vox',
       url: 'https://github.com/casatwy',
     },
-    homepage: 'https://deyo.miaobi.fun/docs',
-    repository: 'https://github.com/casatwy/deyo-skill',
+    homepage: 'https://vox.reka.cc/docs',
+    repository: 'https://github.com/casatwy/vox-skill',
     license: 'UNLICENSED',
-    keywords: ['deyo', 'transcription', 'cli', 'audio', 'video'],
+    keywords: ['vox', 'transcription', 'cli', 'audio', 'video'],
     skills: './skills/',
     interface: {
-      displayName: 'Deyo',
-      shortDescription: 'Transcribe links and local media with Deyo',
-      longDescription: 'Use the Deyo CLI for authenticated link or local-media transcription, reliable progress, cleaned text, and exact raw or subtitle output.',
-      developerName: 'Deyo',
+      displayName: 'Vox',
+      shortDescription: 'Transcribe links and local media with Vox',
+      longDescription: 'Use the Vox CLI for authenticated link or local-media transcription, reliable progress, cleaned text, and exact raw or subtitle output.',
+      developerName: 'Vox',
       category: 'Productivity',
       capabilities: ['Interactive', 'Write'],
-      websiteURL: 'https://deyo.miaobi.fun/docs',
+      websiteURL: 'https://vox.reka.cc/docs',
       defaultPrompt: [
-        'Transcribe this link with Deyo and save cleaned text.',
-        'Transcribe this local media file with Deyo.',
+        'Transcribe this link with Vox and save cleaned text.',
+        'Transcribe this local media file with Vox.',
       ],
     },
   })
 
-  await writeJson(path.join(outputRoot, 'plugins/deyo/.claude-plugin/plugin.json'), {
-    name: 'deyo',
+  await writeJson(path.join(outputRoot, 'plugins/vox/.claude-plugin/plugin.json'), {
+    name: 'vox',
     version,
-    description: 'Official Deyo Claude plugin for reliable link and local-media transcription through the deyo CLI.',
+    description: 'Official Vox Claude plugin for reliable link and local-media transcription through the vox CLI.',
     author: {
-      name: 'Deyo',
+      name: 'Vox',
       url: 'https://github.com/casatwy',
     },
-    homepage: 'https://deyo.miaobi.fun/ai/install/claude',
-    repository: 'https://github.com/casatwy/deyo-skill',
+    homepage: 'https://vox.reka.cc/docs',
+    repository: 'https://github.com/casatwy/vox-skill',
     license: 'UNLICENSED',
-    keywords: ['deyo', 'transcription', 'cli', 'audio', 'video'],
+    keywords: ['vox', 'transcription', 'cli', 'audio', 'video'],
     skills: './skills/',
   })
 
   await writeJson(path.join(outputRoot, '.agents/plugins/marketplace.json'), {
-    name: 'deyo-official',
+    name: 'vox-official',
     interface: {
-      displayName: 'Deyo Official',
+      displayName: 'Vox Official',
     },
     plugins: [{
-      name: 'deyo',
+      name: 'vox',
       source: {
         source: 'local',
-        path: './plugins/deyo',
+        path: './plugins/vox',
       },
       policy: {
         installation: 'AVAILABLE',
@@ -161,24 +149,24 @@ export async function generateProviders(outputRoot = root, sourceDirectory = can
   })
 
   await writeJson(path.join(outputRoot, '.claude-plugin/marketplace.json'), {
-    name: 'deyo-official',
+    name: 'vox-official',
     owner: {
-      name: 'Deyo',
+      name: 'Vox',
     },
     metadata: {
-      description: 'Official Deyo plugins',
+      description: 'Official Vox plugins',
     },
     plugins: [{
-      name: 'deyo',
-      source: './plugins/deyo',
-      description: 'Transcribe links and local media with the Deyo CLI.',
+      name: 'vox',
+      source: './plugins/vox',
+      description: 'Transcribe links and local media with the Vox CLI.',
     }],
   })
 
   await writeJson(path.join(outputRoot, 'gemini-extension.json'), {
-    name: 'deyo',
+    name: 'vox',
     version,
-    description: 'Official Deyo Gemini extension for reliable link and local-media transcription through the deyo CLI.',
+    description: 'Official Vox Gemini extension for reliable link and local-media transcription through the vox CLI.',
   })
 
   await writeJson(path.join(outputRoot, 'providers/metadata.json'), {
@@ -187,28 +175,28 @@ export async function generateProviders(outputRoot = root, sourceDirectory = can
     minimumCliVersion: manifest.minimumCliVersion,
     canonicalTreeHash,
     source: {
-      repository: 'https://github.com/casatwy/deyo-skill.git',
+      repository: 'https://github.com/casatwy/vox-skill.git',
       ref: `v${version}`,
     },
     providers: {
       codex: {
-        marketplace: 'deyo-official',
-        plugin: 'deyo@deyo-official',
-        skillPath: 'plugins/deyo/skills/deyo',
+        marketplace: 'vox-official',
+        plugin: 'vox@vox-official',
+        skillPath: 'plugins/vox/skills/vox',
       },
       claude: {
-        marketplace: 'deyo-official',
-        plugin: 'deyo@deyo-official',
-        skillPath: 'plugins/deyo/skills/deyo',
+        marketplace: 'vox-official',
+        plugin: 'vox@vox-official',
+        skillPath: 'plugins/vox/skills/vox',
       },
       gemini: {
-        extension: 'deyo',
-        skillPath: 'skills/deyo',
+        extension: 'vox',
+        skillPath: 'skills/vox',
       },
       openclaw: {
-        registry: '@casatwy/deyo',
+        registry: '@casatwy/vox',
         license: 'MIT-0',
-        skillPath: 'deyo',
+        skillPath: 'vox',
         ...openClawProjection,
       },
     },
@@ -230,7 +218,7 @@ async function assertDirectoryEqual(expected, actual) {
 }
 
 export async function checkProviders() {
-  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'deyo-providers-'))
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'vox-providers-'))
   try {
     await generateProviders(temporaryRoot)
     const files = ['gemini-extension.json']

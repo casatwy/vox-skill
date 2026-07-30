@@ -1,6 +1,6 @@
-# Deyo Skill v1.0.11 explicit OpenClaw update consent
+# vox Skill 0.1.0
 
-- Require Deyo CLI 0.2.2 and move the OpenClaw update manager out of the Skill artifact into the installed npm CLI.
-- Enroll only verified owner-qualified managed installs, keep status offline, and check the verified `latest` candidate at most once every 24 hours without installing it.
-- Require a fresh user confirmation before `openclaw skills update @casatwy/deyo`; stale candidates are never updated under an earlier confirmation.
-- Publish an OpenClaw v2 projection that is slash-invocable only, declares the required `deyo` and `openclaw` binaries, and contains no child-process updater.
+- Introduce the independent `vox` Skill for Codex, Claude Code, Gemini CLI, and OpenClaw.
+- Require `@casatwy/vox` CLI 0.1.0 and explicit `vox transcribe` commands for one user-provided URL or one exact local file.
+- Keep interactive API keys out of argv, isolate configuration under `~/.config/vox`, and use only `VOX_API_KEY` for automation.
+- Generate consistent `vox-official`, `casatwy/vox-skill`, and `@casatwy/vox` provider metadata.

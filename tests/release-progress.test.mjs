@@ -140,7 +140,7 @@ test('stage timing, skip, polling, and failure summaries include recovery guidan
 
 test('safe command labels never include release notes, temporary paths, or refs', () => {
   const notes = 'private release notes that must not appear'
-  const temporary = '/private/tmp/deyo-clawhub-stage-secret'
+  const temporary = '/private/tmp/vox-clawhub-stage-secret'
   const label = safeCommandLabel('/repo/node_modules/.bin/clawhub', [
     'publish', temporary,
     '--changelog', notes,

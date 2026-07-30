@@ -7,10 +7,10 @@ import { fileURLToPath } from 'node:url'
 import { assertCanonicalLayout, generateProviders } from '../scripts/generate-providers.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
-const canonical = path.join(root, 'deyo')
+const canonical = path.join(root, 'vox')
 
 test('provider generation removes stale artifacts and normalizes JSON modes', async () => {
-  const output = await mkdtemp(path.join(os.tmpdir(), 'deyo-provider-output-'))
+  const output = await mkdtemp(path.join(os.tmpdir(), 'vox-provider-output-'))
   try {
     await mkdir(path.join(output, '.agents', 'stale'), { recursive: true })
     await writeFile(path.join(output, '.agents', 'stale', 'junk.json'), '{}\n')
@@ -27,11 +27,11 @@ test('provider generation removes stale artifacts and normalizes JSON modes', as
     assert.equal(metadata.canonicalTreeHash, generated.canonicalTreeHash)
     assert.equal(metadata.providers.openclaw.license, 'MIT-0')
     assert.equal(metadata.providers.openclaw.artifactProjection, 'openclaw-v2')
-    assert.equal(metadata.providers.openclaw.projectionSince, '1.0.11')
+    assert.equal(metadata.providers.openclaw.projectionSince, '0.1.0')
     assert.deepEqual(metadata.providers.openclaw.excludedPaths, ['agents/**', 'scripts/openclaw-auto-update.mjs'])
     assert.equal(metadata.providers.openclaw.userInvocable, true)
     assert.equal(metadata.providers.openclaw.disableModelInvocation, true)
-    assert.deepEqual(metadata.providers.openclaw.requiresBins, ['deyo', 'openclaw'])
+    assert.deepEqual(metadata.providers.openclaw.requiresBins, ['vox', 'openclaw'])
     assert.equal(metadata.providers.openclaw.updateTransport, 'npm-cli')
   }
   finally {
@@ -40,15 +40,15 @@ test('provider generation removes stale artifacts and normalizes JSON modes', as
 })
 
 test('canonical layout rejects extra files and symlinks', async () => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'deyo-canonical-layout-'))
-  const copy = path.join(temporary, 'deyo')
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'vox-canonical-layout-'))
+  const copy = path.join(temporary, 'vox')
   try {
     await cp(canonical, copy, { recursive: true, dereference: false, preserveTimestamps: false })
     await writeFile(path.join(copy, '.DS_Store'), 'junk')
-    await assert.rejects(assertCanonicalLayout(copy), /Unexpected canonical Deyo entry: \.DS_Store/)
+    await assert.rejects(assertCanonicalLayout(copy), /Unexpected canonical Vox entry: \.DS_Store/)
     await rm(path.join(copy, '.DS_Store'))
     await symlink('SKILL.md', path.join(copy, 'SKILL-link.md'))
-    await assert.rejects(assertCanonicalLayout(copy), /Unexpected canonical Deyo entry: SKILL-link\.md \(symlink\)/)
+    await assert.rejects(assertCanonicalLayout(copy), /Unexpected canonical Vox entry: SKILL-link\.md \(symlink\)/)
   }
   finally {
     await rm(temporary, { recursive: true, force: true })
