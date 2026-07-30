@@ -64,6 +64,7 @@ npm install -g @casatwy/deyo@^0.2.0
 ## Inputs
 
 - Support `xiaoyuzhou`, `ximalaya`, `bilibili`, `douyin`, `xiaohongshu`, `youtube`, `apple-podcasts`, and `twitter` links.
+- Transcribable inputs remain concrete episodes, videos, or single posts. Apple Podcasts show pages, Xiaoyuzhou podcast pages, and supported Bilibili Bangumi / UGC collection pages are recognized only to reject whole-show or whole-collection transcription and guide the user to a concrete episode or video.
 - Support one ordinary local audio/video file as source `upload`. Accept `deyo ./audio.mp3`, `deyo --file ./audio.mp3`, or `deyo -- ./audio.mp3`.
 - Add `--mime-type audio/*` or `--mime-type video/*` only when automatic detection is missing or wrong.
 - Do not pass directories, globs, stdin, special files, multiple files, batch queues, or resumable-upload expectations.
@@ -213,7 +214,12 @@ Progress/status remains on stderr. Upload JSON is redacted by the CLI/server so 
 - If `task.created` reports `mode: "subtitles"` or `resultReady: true`, explain that usable subtitles were found and no long paid transcription is needed.
 - YouTube subtitle-direct tasks do not consume minutes. Full link/upload transcription consumes minutes after job creation or reuse.
 - Douyin image/text posts, Xiaohongshu image notes, Twitter/X text/image tweets, and Ximalaya albums do not proceed to transcription. Ask for a supported video, tweet, or episode as appropriate.
-- Apple Podcasts requires a `podcasts.apple.com` episode link with `?i=`.
+- Apple Podcasts show pages without a valid episode `?i=` return HTTP 422. Ask for a concrete `podcasts.apple.com` episode link with a valid `?i=`; do not retry the show page as a paid task.
+- Xiaoyuzhou `/podcast/:id` pages return HTTP 422. Ask for a concrete `/episode/:id` link.
+- Bilibili Bangumi `ss` / `md` and supported UGC season / series collection pages return HTTP 422. Ask for a concrete BV, part, player, app-video, or Bangumi `ep` link. Do not enumerate or present the collection's video list.
+- A Bilibili trial video is a special concrete video with only a shorter official media segment available. The CLI must show the full duration, transcribable duration, expected minute deduction, and the warning `这是B站专属视频，Deyo 只能转写试看部分`, then obtain the current user's explicit interactive `y` confirmation. Never answer the prompt on the user's behalf. Refusal and non-TTY execution must stop without creating a task or deducting minutes. Billing uses only the transcribable duration.
+- A paid or charge-exclusive Bilibili video with no usable trial media still returns HTTP 422. Do not retry it as a forced transcription.
+- These three 422 branches happen before task reuse, balance checks, and minute deduction. They do not consume minutes or create transcription jobs; preserve the server's unsupported response instead of treating it as a transient failure.
 
 ## Interruptions And Failures
 
