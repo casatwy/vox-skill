@@ -4,10 +4,10 @@
   "description": "Official Vox plugin for transcribing one explicit link or local media file through the vox CLI.",
   "author": {
     "name": "Vox",
-    "url": "https://github.com/reka-cc"
+    "url": "https://github.com/casatwy"
   },
   "homepage": "https://vox.reka.cc/docs",
-  "repository": "https://github.com/reka-cc/vox-skill",
+  "repository": "https://github.com/casatwy/vox-skill",
   "license": "MIT-0",
   "keywords": [
     "vox",

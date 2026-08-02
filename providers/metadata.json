@@ -7,7 +7,7 @@
     "canonicalTreeHash": "8896f4b25e05c9e6cc35b022bb8faade76baa433fb433dea83a8ca87e4711fd4"
   },
   "source": {
-    "repository": "https://github.com/reka-cc/vox-skill.git",
+    "repository": "https://github.com/casatwy/vox-skill.git",
     "ref": "v1.0.12"
   },
   "providers": {
@@ -27,7 +27,7 @@
     },
     "gemini": {
       "extension": "vox",
-      "repository": "https://github.com/reka-cc/vox-skill.git",
+      "repository": "https://github.com/casatwy/vox-skill.git",
       "skillPath": "skills/vox",
       "install": "vox skill install --platform gemini",
       "status": "vox skill status --platform gemini"

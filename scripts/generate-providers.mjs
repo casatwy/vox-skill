@@ -22,8 +22,8 @@ const PRODUCT = Object.freeze({
   id: 'vox',
   displayName: 'Vox',
   marketplace: 'vox-official',
-  repository: 'https://github.com/reka-cc/vox-skill',
-  repositoryGit: 'https://github.com/reka-cc/vox-skill.git',
+  repository: 'https://github.com/casatwy/vox-skill',
+  repositoryGit: 'https://github.com/casatwy/vox-skill.git',
   registry: '@casatwy/vox',
   docs: 'https://vox.reka.cc/docs',
 })
@@ -148,7 +148,7 @@ export async function generateProviders(outputRoot = root) {
     description: 'Official Vox plugin for transcribing one explicit link or local media file through the vox CLI.',
     author: {
       name: PRODUCT.displayName,
-      url: 'https://github.com/reka-cc',
+      url: 'https://github.com/casatwy',
     },
     homepage: PRODUCT.docs,
     repository: PRODUCT.repository,

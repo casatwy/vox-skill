@@ -24,7 +24,7 @@ test('generates consistent metadata and all four platform artifacts', async () =
     assert.equal(metadata.skill.minimumCliVersion, '0.1.0')
     assert.equal(metadata.providers.codex.marketplace, 'vox-official')
     assert.equal(metadata.providers.claude.marketplace, 'vox-official')
-    assert.equal(metadata.providers.gemini.repository, 'https://github.com/reka-cc/vox-skill.git')
+    assert.equal(metadata.providers.gemini.repository, 'https://github.com/casatwy/vox-skill.git')
     assert.equal(metadata.providers.openclaw.registry, '@casatwy/vox')
 
     await access(path.join(output, 'plugins/vox/.codex-plugin/plugin.json'))

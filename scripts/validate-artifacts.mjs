@@ -19,7 +19,7 @@ assert.deepEqual(manifest, {
 assert.equal(metadata.skill.id, 'vox')
 assert.equal(metadata.skill.version, manifest.skillVersion)
 assert.equal(metadata.skill.minimumCliVersion, manifest.minimumCliVersion)
-assert.equal(metadata.source.repository, 'https://github.com/reka-cc/vox-skill.git')
+assert.equal(metadata.source.repository, 'https://github.com/casatwy/vox-skill.git')
 assert.equal(metadata.providers.codex.marketplace, 'vox-official')
 assert.equal(metadata.providers.claude.marketplace, 'vox-official')
 assert.equal(metadata.providers.gemini.extension, 'vox')
