@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { access, chmod, cp, mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
+import { access, cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -9,37 +9,52 @@ import { assertCanonicalLayout, generateProviders } from '../scripts/generate-pr
 const root = fileURLToPath(new URL('..', import.meta.url))
 const canonical = path.join(root, 'vox')
 
-test('provider generation removes stale artifacts and normalizes JSON modes', async () => {
+test('generates consistent metadata and all four platform artifacts', async () => {
   const output = await mkdtemp(path.join(os.tmpdir(), 'vox-provider-output-'))
   try {
-    await mkdir(path.join(output, '.agents', 'stale'), { recursive: true })
-    await writeFile(path.join(output, '.agents', 'stale', 'junk.json'), '{}\n')
-    await writeFile(path.join(output, 'gemini-extension.json'), '{"stale":true}\n')
-    await chmod(path.join(output, 'gemini-extension.json'), 0o600)
+    const result = await generateProviders(output)
+    assert.equal(result.skillVersion, '1.0.12')
+    assert.equal(result.minimumCliVersion, '0.1.0')
+    assert.match(result.canonicalTreeHash, /^[a-f0-9]{64}$/)
 
-    const generated = await generateProviders(output)
-    assert.match(generated.canonicalTreeHash, /^[a-f0-9]{64}$/)
-    await assert.rejects(access(path.join(output, '.agents', 'stale', 'junk.json')), { code: 'ENOENT' })
-    assert.equal((await stat(path.join(output, 'gemini-extension.json'))).mode & 0o777, 0o644)
-    assert.equal((await stat(path.join(output, 'providers', 'metadata.json'))).mode & 0o777, 0o644)
+    const metadata = JSON.parse(await readFile(path.join(output, 'providers/metadata.json'), 'utf8'))
+    assert.deepEqual(Object.keys(metadata.providers).sort(), ['claude', 'codex', 'gemini', 'openclaw'])
+    assert.equal(metadata.skill.id, 'vox')
+    assert.equal(metadata.skill.version, '1.0.12')
+    assert.equal(metadata.skill.minimumCliVersion, '0.1.0')
+    assert.equal(metadata.providers.codex.marketplace, 'vox-official')
+    assert.equal(metadata.providers.claude.marketplace, 'vox-official')
+    assert.equal(metadata.providers.gemini.repository, 'https://github.com/reka-cc/vox-skill.git')
+    assert.equal(metadata.providers.openclaw.registry, '@casatwy/vox')
 
-    const metadata = JSON.parse(await readFile(path.join(output, 'providers', 'metadata.json'), 'utf8'))
-    assert.equal(metadata.canonicalTreeHash, generated.canonicalTreeHash)
-    assert.equal(metadata.providers.openclaw.license, 'MIT-0')
-    assert.equal(metadata.providers.openclaw.artifactProjection, 'openclaw-v2')
-    assert.equal(metadata.providers.openclaw.projectionSince, '0.1.0')
-    assert.deepEqual(metadata.providers.openclaw.excludedPaths, ['agents/**', 'scripts/openclaw-auto-update.mjs'])
-    assert.equal(metadata.providers.openclaw.userInvocable, true)
-    assert.equal(metadata.providers.openclaw.disableModelInvocation, true)
-    assert.deepEqual(metadata.providers.openclaw.requiresBins, ['vox', 'openclaw'])
-    assert.equal(metadata.providers.openclaw.updateTransport, 'npm-cli')
+    await access(path.join(output, 'plugins/vox/.codex-plugin/plugin.json'))
+    await access(path.join(output, 'plugins/vox/.claude-plugin/plugin.json'))
+    await access(path.join(output, 'skills/vox/SKILL.md'))
+    const openClaw = await readFile(path.join(output, 'providers/openclaw/vox/SKILL.md'), 'utf8')
+    assert.match(openClaw, /^user-invocable: true$/m)
+    assert.match(openClaw, /^disable-model-invocation: true$/m)
+    assert.match(openClaw, /^        - vox$/m)
+    await assert.rejects(access(path.join(output, 'providers/openclaw/vox/agents')), { code: 'ENOENT' })
   }
   finally {
     await rm(output, { recursive: true, force: true })
   }
 })
 
-test('canonical layout rejects extra files and symlinks', async () => {
+test('generation removes stale provider artifacts', async () => {
+  const output = await mkdtemp(path.join(os.tmpdir(), 'vox-provider-stale-'))
+  try {
+    await mkdir(path.join(output, 'providers/stale'), { recursive: true })
+    await writeFile(path.join(output, 'providers/stale/junk'), 'stale')
+    await generateProviders(output)
+    await assert.rejects(access(path.join(output, 'providers/stale/junk')), { code: 'ENOENT' })
+  }
+  finally {
+    await rm(output, { recursive: true, force: true })
+  }
+})
+
+test('canonical layout rejects extra entries and symlinks', async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'vox-canonical-layout-'))
   const copy = path.join(temporary, 'vox')
   try {

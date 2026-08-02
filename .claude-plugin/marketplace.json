@@ -10,7 +10,7 @@
     {
       "name": "vox",
       "source": "./plugins/vox",
-      "description": "Transcribe links and local media with the Vox CLI."
+      "description": "Transcribe one explicit link or local media file with the Vox CLI."
     }
   ]
 }

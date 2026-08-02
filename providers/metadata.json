@@ -1,44 +1,48 @@
 {
   "schema": 1,
-  "skillVersion": "0.1.0",
-  "minimumCliVersion": "0.1.0",
-  "canonicalTreeHash": "5820ac2f545a7fce47568aa63de906b183156297ded708df81252bae826943af",
+  "skill": {
+    "id": "vox",
+    "version": "1.0.12",
+    "minimumCliVersion": "0.1.0",
+    "canonicalTreeHash": "8896f4b25e05c9e6cc35b022bb8faade76baa433fb433dea83a8ca87e4711fd4"
+  },
   "source": {
-    "repository": "https://github.com/casatwy/vox-skill.git",
-    "ref": "v0.1.0"
+    "repository": "https://github.com/reka-cc/vox-skill.git",
+    "ref": "v1.0.12"
   },
   "providers": {
     "codex": {
       "marketplace": "vox-official",
       "plugin": "vox@vox-official",
-      "skillPath": "plugins/vox/skills/vox"
+      "skillPath": "plugins/vox/skills/vox",
+      "install": "vox skill install --platform codex",
+      "status": "vox skill status --platform codex"
     },
     "claude": {
       "marketplace": "vox-official",
       "plugin": "vox@vox-official",
-      "skillPath": "plugins/vox/skills/vox"
+      "skillPath": "plugins/vox/skills/vox",
+      "install": "vox skill install --platform claude",
+      "status": "vox skill status --platform claude"
     },
     "gemini": {
       "extension": "vox",
-      "skillPath": "skills/vox"
+      "repository": "https://github.com/reka-cc/vox-skill.git",
+      "skillPath": "skills/vox",
+      "install": "vox skill install --platform gemini",
+      "status": "vox skill status --platform gemini"
     },
     "openclaw": {
       "registry": "@casatwy/vox",
       "license": "MIT-0",
-      "skillPath": "vox",
-      "artifactProjection": "openclaw-v2",
-      "projectionSince": "0.1.0",
-      "excludedPaths": [
-        "agents/**",
-        "scripts/openclaw-auto-update.mjs"
-      ],
+      "skillPath": "providers/openclaw/vox",
+      "install": "vox skill install --platform openclaw",
+      "status": "vox skill status --platform openclaw",
       "userInvocable": true,
       "disableModelInvocation": true,
       "requiresBins": [
-        "vox",
-        "openclaw"
-      ],
-      "updateTransport": "npm-cli"
+        "vox"
+      ]
     }
   }
 }

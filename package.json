@@ -1,5 +1,5 @@
 {
-  "name": "vox-skill-release",
+  "name": "vox-skill-build",
   "version": "0.0.0-private",
   "private": true,
   "type": "module",
@@ -11,9 +11,5 @@
     "generate:check": "node scripts/generate-providers.mjs --check",
     "validate": "node scripts/validate-artifacts.mjs",
     "test": "node --test tests/*.test.mjs"
-  },
-  "devDependencies": {
-    "clawhub": "0.23.1",
-    "yaml": "2.8.1"
   }
 }

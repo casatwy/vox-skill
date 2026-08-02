@@ -1,14 +1,14 @@
 {
   "name": "vox",
-  "version": "0.1.0",
-  "description": "Official Vox plugin for reliable link and local-media transcription through the vox CLI.",
+  "version": "1.0.12",
+  "description": "Official Vox plugin for transcribing one explicit link or local media file through the vox CLI.",
   "author": {
     "name": "Vox",
-    "url": "https://github.com/casatwy"
+    "url": "https://github.com/reka-cc"
   },
   "homepage": "https://vox.reka.cc/docs",
-  "repository": "https://github.com/casatwy/vox-skill",
-  "license": "UNLICENSED",
+  "repository": "https://github.com/reka-cc/vox-skill",
+  "license": "MIT-0",
   "keywords": [
     "vox",
     "transcription",
@@ -19,8 +19,7 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Vox",
-    "shortDescription": "Transcribe links and local media with Vox",
-    "longDescription": "Use the Vox CLI for authenticated link or local-media transcription, reliable progress, cleaned text, and exact raw or subtitle output.",
+    "shortDescription": "Transcribe one explicit link or local media file with Vox",
     "developerName": "Vox",
     "category": "Productivity",
     "capabilities": [
@@ -29,8 +28,8 @@
     ],
     "websiteURL": "https://vox.reka.cc/docs",
     "defaultPrompt": [
-      "Transcribe this link with Vox and save cleaned text.",
-      "Transcribe this local media file with Vox."
+      "Transcribe this one link with Vox.",
+      "Transcribe this exact local media file with Vox."
     ]
   }
 }

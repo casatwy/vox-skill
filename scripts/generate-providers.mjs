@@ -1,38 +1,95 @@
 #!/usr/bin/env node
 
-import { chmod, cp, mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { chmod, cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { assertStableSemver, describeTree, hashTree } from './release-core.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const canonicalDirectory = path.join(root, 'vox')
-const GENERATED_DIRECTORIES = ['.agents', '.claude-plugin', 'plugins', 'providers', 'skills']
-const CANONICAL_LAYOUT = new Map([
+const canonical = path.join(root, 'vox')
+const generatedDirectories = ['.agents', '.claude-plugin', 'plugins', 'providers', 'skills']
+const generatedFiles = ['gemini-extension.json']
+const canonicalLayout = new Map([
   ['SKILL.md', 'file'],
   ['agents', 'directory'],
-  ['agents/claude.yaml', 'file'],
-  ['agents/gemini.yaml', 'file'],
   ['agents/openai.yaml', 'file'],
   ['manifest.json', 'file'],
-  ['scripts', 'directory'],
-  ['scripts/publish-cleaned.mjs', 'file'],
 ])
+
+const PRODUCT = Object.freeze({
+  id: 'vox',
+  displayName: 'Vox',
+  marketplace: 'vox-official',
+  repository: 'https://github.com/reka-cc/vox-skill',
+  repositoryGit: 'https://github.com/reka-cc/vox-skill.git',
+  registry: '@casatwy/vox',
+  docs: 'https://vox.reka.cc/docs',
+})
 
 function json(value) {
   return `${JSON.stringify(value, null, 2)}\n`
 }
 
-async function readManifest(sourceDirectory) {
-  const manifest = JSON.parse(await readFile(path.join(sourceDirectory, 'manifest.json'), 'utf8'))
-  assertStableSemver(manifest.skillVersion, 'canonical skill version')
-  assertStableSemver(manifest.minimumCliVersion, 'minimum CLI version')
+function assertStableSemver(value, label) {
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value)) {
+    throw new Error(`${label} must be a stable three-part SemVer`)
+  }
+}
+
+async function describeTree(directory, base = directory) {
+  const entries = []
+  for (const name of (await readdir(directory)).sort()) {
+    const absolute = path.join(directory, name)
+    const relative = path.relative(base, absolute).split(path.sep).join('/')
+    const info = await lstat(absolute)
+    if (info.isSymbolicLink()) entries.push({ path: relative, type: 'symlink' })
+    else if (info.isDirectory()) {
+      entries.push({ path: relative, type: 'directory' })
+      entries.push(...await describeTree(absolute, base))
+    }
+    else if (info.isFile()) {
+      const content = await readFile(absolute)
+      entries.push({
+        path: relative,
+        type: 'file',
+        mode: info.mode & 0o777,
+        size: content.length,
+        sha256: createHash('sha256').update(content).digest('hex'),
+      })
+    }
+    else entries.push({ path: relative, type: 'special' })
+  }
+  return entries
+}
+
+async function hashTree(directory) {
+  return createHash('sha256').update(JSON.stringify(await describeTree(directory))).digest('hex')
+}
+
+async function readManifest() {
+  const manifest = JSON.parse(await readFile(path.join(canonical, 'manifest.json'), 'utf8'))
   if (Object.keys(manifest).sort().join(',') !== 'minimumCliVersion,skillVersion') {
     throw new Error('vox/manifest.json must contain only skillVersion and minimumCliVersion')
   }
+  assertStableSemver(manifest.skillVersion, 'Skill version')
+  assertStableSemver(manifest.minimumCliVersion, 'Minimum CLI version')
   return manifest
+}
+
+export async function assertCanonicalLayout(directory = canonical) {
+  const actual = new Map((await describeTree(directory)).map(entry => [entry.path, entry.type]))
+  for (const [entryPath, entryType] of actual) {
+    if (canonicalLayout.get(entryPath) !== entryType) {
+      throw new Error(`Unexpected canonical Vox entry: ${entryPath} (${entryType})`)
+    }
+  }
+  for (const [entryPath, entryType] of canonicalLayout) {
+    if (actual.get(entryPath) !== entryType) {
+      throw new Error(`Missing canonical Vox entry: ${entryPath} (${entryType})`)
+    }
+  }
 }
 
 async function replaceDirectory(source, target) {
@@ -47,95 +104,82 @@ async function writeJson(target, value) {
   await chmod(target, 0o644)
 }
 
-export async function assertCanonicalLayout(sourceDirectory = canonicalDirectory) {
-  const entries = await describeTree(sourceDirectory)
-  const actual = new Map(entries.map(entry => [entry.path, entry.type]))
-  for (const entry of entries) {
-    const expectedType = CANONICAL_LAYOUT.get(entry.path)
-    if (!expectedType || expectedType !== entry.type) {
-      throw new Error(`Unexpected canonical Vox entry: ${entry.path} (${entry.type})`)
-    }
+function openClawSkill(source) {
+  const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n/)
+  if (!frontmatter) throw new Error('Canonical SKILL.md is missing frontmatter')
+  if (/^(?:user-invocable|disable-model-invocation|metadata):/m.test(frontmatter[1])) {
+    throw new Error('OpenClaw projection fields must not exist in canonical frontmatter')
   }
-  for (const [expectedPath, expectedType] of CANONICAL_LAYOUT) {
-    if (actual.get(expectedPath) !== expectedType) {
-      throw new Error(`Missing canonical Vox entry: ${expectedPath} (${expectedType})`)
-    }
-  }
+  const extra = [
+    'user-invocable: true',
+    'disable-model-invocation: true',
+    'metadata:',
+    '  openclaw:',
+    '    requires:',
+    '      bins:',
+    '        - vox',
+  ].join('\n')
+  return source.replace(frontmatter[0], `---\n${frontmatter[1]}\n${extra}\n---\n`)
 }
 
-export async function generateProviders(outputRoot = root, sourceDirectory = canonicalDirectory) {
-  await assertCanonicalLayout(sourceDirectory)
-  const manifest = await readManifest(sourceDirectory)
-  const version = manifest.skillVersion
-  const canonicalTreeHash = await hashTree(sourceDirectory)
-  const openClawProjection = {
-    artifactProjection: 'openclaw-v2',
-    projectionSince: '0.1.0',
-    excludedPaths: ['agents/**', 'scripts/openclaw-auto-update.mjs'],
-    userInvocable: true,
-    disableModelInvocation: true,
-    requiresBins: ['vox', 'openclaw'],
-    updateTransport: 'npm-cli',
-  }
+export async function generateProviders(outputRoot = root) {
+  await assertCanonicalLayout()
+  const manifest = await readManifest()
+  const canonicalTreeHash = await hashTree(canonical)
 
-  for (const directory of GENERATED_DIRECTORIES) {
+  for (const directory of generatedDirectories) {
     await rm(path.join(outputRoot, directory), { recursive: true, force: true })
   }
-  await rm(path.join(outputRoot, 'gemini-extension.json'), { force: true })
+  for (const file of generatedFiles) await rm(path.join(outputRoot, file), { force: true })
 
-  await replaceDirectory(sourceDirectory, path.join(outputRoot, 'plugins/vox/skills/vox'))
-  await replaceDirectory(sourceDirectory, path.join(outputRoot, 'skills/vox'))
+  await replaceDirectory(canonical, path.join(outputRoot, 'plugins/vox/skills/vox'))
+  await replaceDirectory(canonical, path.join(outputRoot, 'skills/vox'))
+  await replaceDirectory(canonical, path.join(outputRoot, 'providers/openclaw/vox'))
+  await rm(path.join(outputRoot, 'providers/openclaw/vox/agents'), { recursive: true, force: true })
+  await writeFile(
+    path.join(outputRoot, 'providers/openclaw/vox/SKILL.md'),
+    openClawSkill(await readFile(path.join(canonical, 'SKILL.md'), 'utf8')),
+    { mode: 0o644 },
+  )
 
-  await writeJson(path.join(outputRoot, 'plugins/vox/.codex-plugin/plugin.json'), {
-    name: 'vox',
-    version,
-    description: 'Official Vox plugin for reliable link and local-media transcription through the vox CLI.',
+  const plugin = {
+    name: PRODUCT.id,
+    version: manifest.skillVersion,
+    description: 'Official Vox plugin for transcribing one explicit link or local media file through the vox CLI.',
     author: {
-      name: 'Vox',
-      url: 'https://github.com/casatwy',
+      name: PRODUCT.displayName,
+      url: 'https://github.com/reka-cc',
     },
-    homepage: 'https://vox.reka.cc/docs',
-    repository: 'https://github.com/casatwy/vox-skill',
-    license: 'UNLICENSED',
+    homepage: PRODUCT.docs,
+    repository: PRODUCT.repository,
+    license: 'MIT-0',
     keywords: ['vox', 'transcription', 'cli', 'audio', 'video'],
     skills: './skills/',
+  }
+
+  await writeJson(path.join(outputRoot, 'plugins/vox/.codex-plugin/plugin.json'), {
+    ...plugin,
     interface: {
-      displayName: 'Vox',
-      shortDescription: 'Transcribe links and local media with Vox',
-      longDescription: 'Use the Vox CLI for authenticated link or local-media transcription, reliable progress, cleaned text, and exact raw or subtitle output.',
-      developerName: 'Vox',
+      displayName: PRODUCT.displayName,
+      shortDescription: 'Transcribe one explicit link or local media file with Vox',
+      developerName: PRODUCT.displayName,
       category: 'Productivity',
       capabilities: ['Interactive', 'Write'],
-      websiteURL: 'https://vox.reka.cc/docs',
+      websiteURL: PRODUCT.docs,
       defaultPrompt: [
-        'Transcribe this link with Vox and save cleaned text.',
-        'Transcribe this local media file with Vox.',
+        'Transcribe this one link with Vox.',
+        'Transcribe this exact local media file with Vox.',
       ],
     },
   })
-
-  await writeJson(path.join(outputRoot, 'plugins/vox/.claude-plugin/plugin.json'), {
-    name: 'vox',
-    version,
-    description: 'Official Vox Claude plugin for reliable link and local-media transcription through the vox CLI.',
-    author: {
-      name: 'Vox',
-      url: 'https://github.com/casatwy',
-    },
-    homepage: 'https://vox.reka.cc/docs',
-    repository: 'https://github.com/casatwy/vox-skill',
-    license: 'UNLICENSED',
-    keywords: ['vox', 'transcription', 'cli', 'audio', 'video'],
-    skills: './skills/',
-  })
-
+  await writeJson(path.join(outputRoot, 'plugins/vox/.claude-plugin/plugin.json'), plugin)
   await writeJson(path.join(outputRoot, '.agents/plugins/marketplace.json'), {
-    name: 'vox-official',
+    name: PRODUCT.marketplace,
     interface: {
       displayName: 'Vox Official',
     },
     plugins: [{
-      name: 'vox',
+      name: PRODUCT.id,
       source: {
         source: 'local',
         path: './plugins/vox',
@@ -147,57 +191,69 @@ export async function generateProviders(outputRoot = root, sourceDirectory = can
       category: 'Productivity',
     }],
   })
-
   await writeJson(path.join(outputRoot, '.claude-plugin/marketplace.json'), {
-    name: 'vox-official',
+    name: PRODUCT.marketplace,
     owner: {
-      name: 'Vox',
+      name: PRODUCT.displayName,
     },
     metadata: {
       description: 'Official Vox plugins',
     },
     plugins: [{
-      name: 'vox',
+      name: PRODUCT.id,
       source: './plugins/vox',
-      description: 'Transcribe links and local media with the Vox CLI.',
+      description: 'Transcribe one explicit link or local media file with the Vox CLI.',
     }],
   })
-
   await writeJson(path.join(outputRoot, 'gemini-extension.json'), {
-    name: 'vox',
-    version,
-    description: 'Official Vox Gemini extension for reliable link and local-media transcription through the vox CLI.',
+    name: PRODUCT.id,
+    version: manifest.skillVersion,
+    description: 'Official Vox Gemini extension for transcribing one explicit link or local media file.',
   })
 
   await writeJson(path.join(outputRoot, 'providers/metadata.json'), {
     schema: 1,
-    skillVersion: version,
-    minimumCliVersion: manifest.minimumCliVersion,
-    canonicalTreeHash,
+    skill: {
+      id: PRODUCT.id,
+      version: manifest.skillVersion,
+      minimumCliVersion: manifest.minimumCliVersion,
+      canonicalTreeHash,
+    },
     source: {
-      repository: 'https://github.com/casatwy/vox-skill.git',
-      ref: `v${version}`,
+      repository: PRODUCT.repositoryGit,
+      ref: `v${manifest.skillVersion}`,
     },
     providers: {
       codex: {
-        marketplace: 'vox-official',
-        plugin: 'vox@vox-official',
+        marketplace: PRODUCT.marketplace,
+        plugin: `${PRODUCT.id}@${PRODUCT.marketplace}`,
         skillPath: 'plugins/vox/skills/vox',
+        install: 'vox skill install --platform codex',
+        status: 'vox skill status --platform codex',
       },
       claude: {
-        marketplace: 'vox-official',
-        plugin: 'vox@vox-official',
+        marketplace: PRODUCT.marketplace,
+        plugin: `${PRODUCT.id}@${PRODUCT.marketplace}`,
         skillPath: 'plugins/vox/skills/vox',
+        install: 'vox skill install --platform claude',
+        status: 'vox skill status --platform claude',
       },
       gemini: {
-        extension: 'vox',
+        extension: PRODUCT.id,
+        repository: PRODUCT.repositoryGit,
         skillPath: 'skills/vox',
+        install: 'vox skill install --platform gemini',
+        status: 'vox skill status --platform gemini',
       },
       openclaw: {
-        registry: '@casatwy/vox',
+        registry: PRODUCT.registry,
         license: 'MIT-0',
-        skillPath: 'vox',
-        ...openClawProjection,
+        skillPath: 'providers/openclaw/vox',
+        install: 'vox skill install --platform openclaw',
+        status: 'vox skill status --platform openclaw',
+        userInvocable: true,
+        disableModelInvocation: true,
+        requiresBins: ['vox'],
       },
     },
   })
@@ -207,12 +263,14 @@ export async function generateProviders(outputRoot = root, sourceDirectory = can
 
 async function assertFileEqual(expected, actual) {
   const [expectedBytes, actualBytes] = await Promise.all([readFile(expected), readFile(actual)])
-  if (!expectedBytes.equals(actualBytes)) throw new Error(`Generated file is stale: ${path.relative(root, actual)}`)
+  if (!expectedBytes.equals(actualBytes)) {
+    throw new Error(`Generated file is stale: ${path.relative(root, actual)}`)
+  }
 }
 
 async function assertDirectoryEqual(expected, actual) {
-  const [expectedEntries, actualEntries] = await Promise.all([describeTree(expected), describeTree(actual)])
-  if (JSON.stringify(expectedEntries) !== JSON.stringify(actualEntries)) {
+  const [expectedTree, actualTree] = await Promise.all([describeTree(expected), describeTree(actual)])
+  if (JSON.stringify(expectedTree) !== JSON.stringify(actualTree)) {
     throw new Error(`Generated directory is stale: ${path.relative(root, actual)}`)
   }
 }
@@ -221,10 +279,10 @@ export async function checkProviders() {
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'vox-providers-'))
   try {
     await generateProviders(temporaryRoot)
-    const files = ['gemini-extension.json']
-    const directories = GENERATED_DIRECTORIES
-    for (const file of files) await assertFileEqual(path.join(temporaryRoot, file), path.join(root, file))
-    for (const directory of directories) {
+    for (const file of generatedFiles) {
+      await assertFileEqual(path.join(temporaryRoot, file), path.join(root, file))
+    }
+    for (const directory of generatedDirectories) {
       await stat(path.join(root, directory))
       await assertDirectoryEqual(path.join(temporaryRoot, directory), path.join(root, directory))
     }
