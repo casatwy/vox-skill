@@ -312,7 +312,7 @@ const runtime = {
   interactive: true,
   environment: process.env,
   confirm: async (expected) => {
-    if (process.env.MOCK_CONFIRM !== expected) {
+    if (!(process.env.MOCK_CONFIRM || '').split('|').includes(expected)) {
       throw new Error('simulated confirmation mismatch: expected ' + expected)
     }
     if (process.env.MOCK_CONFIRM_MUTATE_SOURCE === '1') {
@@ -1419,4 +1419,44 @@ test('synced terminal fix-forward rejects unchanged canonical and confirmation d
       } finally { await fixture.cleanup() }
     })
   }
+})
+
+
+test('ordinary publish completes the immutable version while preserving later canonical edits', { timeout: 45_000 }, async () => {
+  const fixture = await createFixture()
+  try {
+    const pending = await fixture.formal([], {
+      MOCK_CONFIRM: 'publish vox v1.0.9', MOCK_CLAWHUB_VERIFY: 'pending', MOCK_REVIEW_TIMEOUT_MS: '0',
+    })
+    assert.equal(pending.code, 1)
+    const canonical = path.join(fixture.repo, 'vox/SKILL.md')
+    const changed = `${await readFile(canonical, 'utf8')}\n<!-- next version installation documentation -->\n`
+    await writeFile(canonical, changed)
+    const before = await readJson(fixture.statePath)
+    const dry = await fixture.cli(['--dry-run'])
+    assert.equal(dry.code, 0, dry.stderr)
+    assert.deepEqual(await readJson(fixture.statePath), before)
+    const resumed = await fixture.formal([], { MOCK_CONFIRM: 'resume vox v1.0.9' })
+    assert.equal(resumed.code, 0, resumed.stderr)
+    assert.equal(await readFile(canonical, 'utf8'), changed)
+    assert.equal((await readJson(fixture.receiptPath)).skillVersion, '1.0.9')
+    const commands = (await readFile(path.join(fixture.env.MOCK_CLAWHUB_STATE, 'commands.log'), 'utf8')).trim().split('\n').map(JSON.parse)
+    assert.equal(commands.filter(args => args[0] === 'publish' && !args.includes('--dry-run')).length, 1)
+  } finally { await fixture.cleanup() }
+})
+test('ordinary publish advances a repaired terminal release through guarded fix-forward', { timeout: 60_000 }, async () => {
+  const fixture = await createFixture()
+  try {
+    await createTerminalSecurityRelease(fixture)
+    const canonical = path.join(fixture.repo, 'vox/SKILL.md')
+    await writeFile(canonical, `${await readFile(canonical, 'utf8')}\n<!-- explicitly authorized installation -->\n`)
+    const dry = await fixture.cli(['--dry-run'])
+    assert.equal(dry.code, 0, dry.stderr)
+    assert.equal((await readJson(fixture.statePath)).targetVersion, '1.0.9')
+    const result = await fixture.formal([], {
+      MOCK_CONFIRM: 'fix-forward vox v1.0.9 to v1.0.10|publish vox v1.0.10',
+    })
+    assert.equal(result.code, 0, result.stderr)
+    assert.equal((await readJson(fixture.receiptPathFor('1.0.10'))).skillVersion, '1.0.10')
+  } finally { await fixture.cleanup() }
 })

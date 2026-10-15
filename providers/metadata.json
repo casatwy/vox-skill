@@ -2,13 +2,13 @@
   "schema": 1,
   "skill": {
     "id": "vox",
-    "version": "1.0.12",
+    "version": "1.0.13",
     "minimumCliVersion": "0.1.0",
-    "canonicalTreeHash": "2c9b225ddae3a5e13711b86b2ffa3ad449cc0b5ddd64cb7869d865e602cb6558"
+    "canonicalTreeHash": "04dfdeff5a5fe53bebebdc3af5a6552e5d99f56715804f24f4ad5a0ff4cfe7f6"
   },
   "source": {
     "repository": "https://github.com/casatwy/vox-skill.git",
-    "ref": "v1.0.12"
+    "ref": "v1.0.13"
   },
   "providers": {
     "codex": {

@@ -27,7 +27,7 @@ vox --help
 Require CLI `0.1.0` or newer and explicit `auth`, `transcribe`, and `skill` commands. If it is missing or too old, ask before installing or upgrading:
 
 ```bash
-npm install -g @casatwy/vox@^0.1.0
+npm install -g @casatwy/vox@latest
 ```
 
 Do not fall back to another product's CLI, environment variables, or configuration.

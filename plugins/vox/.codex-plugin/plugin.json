@@ -1,6 +1,6 @@
 {
   "name": "vox",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Official Vox plugin for transcribing one explicit link or local media file through the vox CLI.",
   "author": {
     "name": "Vox",
