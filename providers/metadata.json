@@ -4,7 +4,7 @@
     "id": "vox",
     "version": "1.0.12",
     "minimumCliVersion": "0.1.0",
-    "canonicalTreeHash": "8896f4b25e05c9e6cc35b022bb8faade76baa433fb433dea83a8ca87e4711fd4"
+    "canonicalTreeHash": "2c9b225ddae3a5e13711b86b2ffa3ad449cc0b5ddd64cb7869d865e602cb6558"
   },
   "source": {
     "repository": "https://github.com/casatwy/vox-skill.git",

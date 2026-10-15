@@ -12,10 +12,9 @@ const metadata = JSON.parse(await readFile(path.join(root, 'providers/metadata.j
 const skill = await readFile(path.join(root, 'vox/SKILL.md'), 'utf8')
 const openai = await readFile(path.join(root, 'vox/agents/openai.yaml'), 'utf8')
 
-assert.deepEqual(manifest, {
-  skillVersion: '1.0.12',
-  minimumCliVersion: '0.1.0',
-})
+for (const key of ['skillVersion', 'minimumCliVersion']) {
+  assert.match(manifest[key], /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/)
+}
 assert.equal(metadata.skill.id, 'vox')
 assert.equal(metadata.skill.version, manifest.skillVersion)
 assert.equal(metadata.skill.minimumCliVersion, manifest.minimumCliVersion)

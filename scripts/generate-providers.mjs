@@ -64,7 +64,7 @@ async function describeTree(directory, base = directory) {
   return entries
 }
 
-async function hashTree(directory) {
+export async function hashTree(directory) {
   return createHash('sha256').update(JSON.stringify(await describeTree(directory))).digest('hex')
 }
 
@@ -104,7 +104,7 @@ async function writeJson(target, value) {
   await chmod(target, 0o644)
 }
 
-function openClawSkill(source) {
+export function openClawSkill(source) {
   const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n/)
   if (!frontmatter) throw new Error('Canonical SKILL.md is missing frontmatter')
   if (/^(?:user-invocable|disable-model-invocation|metadata):/m.test(frontmatter[1])) {

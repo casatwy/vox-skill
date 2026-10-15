@@ -8,20 +8,21 @@ import { assertCanonicalLayout, generateProviders } from '../scripts/generate-pr
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const canonical = path.join(root, 'vox')
+const manifest = JSON.parse(await readFile(path.join(canonical, 'manifest.json'), 'utf8'))
 
 test('generates consistent metadata and all four platform artifacts', async () => {
   const output = await mkdtemp(path.join(os.tmpdir(), 'vox-provider-output-'))
   try {
     const result = await generateProviders(output)
-    assert.equal(result.skillVersion, '1.0.12')
-    assert.equal(result.minimumCliVersion, '0.1.0')
+    assert.equal(result.skillVersion, manifest.skillVersion)
+    assert.equal(result.minimumCliVersion, manifest.minimumCliVersion)
     assert.match(result.canonicalTreeHash, /^[a-f0-9]{64}$/)
 
     const metadata = JSON.parse(await readFile(path.join(output, 'providers/metadata.json'), 'utf8'))
     assert.deepEqual(Object.keys(metadata.providers).sort(), ['claude', 'codex', 'gemini', 'openclaw'])
     assert.equal(metadata.skill.id, 'vox')
-    assert.equal(metadata.skill.version, '1.0.12')
-    assert.equal(metadata.skill.minimumCliVersion, '0.1.0')
+    assert.equal(metadata.skill.version, manifest.skillVersion)
+    assert.equal(metadata.skill.minimumCliVersion, manifest.minimumCliVersion)
     assert.equal(metadata.providers.codex.marketplace, 'vox-official')
     assert.equal(metadata.providers.claude.marketplace, 'vox-official')
     assert.equal(metadata.providers.gemini.repository, 'https://github.com/casatwy/vox-skill.git')
@@ -68,4 +69,15 @@ test('canonical layout rejects extra entries and symlinks', async () => {
   finally {
     await rm(temporary, { recursive: true, force: true })
   }
+})
+
+test('ClawHub projection matches the generated OpenClaw artifact', async () => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'vox-projection-test-'))
+  try {
+    const { projectClawHubSkill } = await import('../scripts/clawhub-projection.mjs')
+    const { clawHubFileFingerprint } = await import('../scripts/release-core.mjs')
+    await generateProviders(path.join(temporary, 'generated'))
+    await projectClawHubSkill(canonical, path.join(temporary, 'projected'))
+    assert.deepEqual(await clawHubFileFingerprint(path.join(temporary, 'projected')), await clawHubFileFingerprint(path.join(temporary, 'generated/providers/openclaw/vox')))
+  } finally { await rm(temporary, { recursive: true, force: true }) }
 })
