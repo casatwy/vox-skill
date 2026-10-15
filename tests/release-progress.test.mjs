@@ -115,7 +115,7 @@ test('stage timing, skip, polling, and failure summaries include recovery guidan
   })
   reporter.skip('Create release commit', 'recovery phase committed')
   reporter.poll('security scan pending', { elapsedMs: 15_000, remainingMs: 585_000, nextMs: 15_000 })
-  reporter.setRecovery('tag_pushed', 'make publish RESUME=1')
+  reporter.setRecovery('tag_pushed', 'make publish')
   const error = new CommandExecutionError('git push', { code: 42 })
   await assert.rejects(
     reporter.stage('Push immutable release tag', async () => {
@@ -133,7 +133,7 @@ test('stage timing, skip, polling, and failure summaries include recovery guidan
   assert.match(stderr.text(), /POLL ClawHub review: security scan pending; waited=15\.0s; remaining=585\.0s; next=15\.0s/)
   assert.match(stderr.text(), /FAIL Push immutable release tag \(250ms; exit=42\)/)
   assert.match(stderr.text(), /FAILURE stage=Push immutable release tag; exit=42; recovery_phase=tag_pushed/)
-  assert.match(stderr.text(), /next="make publish RESUME=1"/)
+  assert.match(stderr.text(), /next="make publish"/)
   assert.equal(intervals.timers.size, 0)
   assert.equal(error.progressReported, true)
 })
@@ -148,4 +148,52 @@ test('safe command labels never include release notes, temporary paths, or refs'
   ])
   assert.equal(label, 'clawhub publish')
   assert.doesNotMatch(label, /private|tmp|1\.2\.3/)
+})
+
+test('nested stages and parallel commands share one timer; confirmations suspend all rendering', async () => {
+  let now = 0
+  const stderr = memoryStream(true)
+  const intervals = fakeIntervals()
+  const reporter = new ReleaseProgressReporter({ stderr, stdout: memoryStream(), isTTY: true,
+    now: () => now, setInterval: intervals.setInterval, clearInterval: intervals.clearInterval })
+  await reporter.stage('Review wait', async () => {
+    now = 100
+    intervals.tickAll()
+    assert.match(stderr.text(), /Review wait \(100ms\)/)
+    await reporter.stage('Nested', async () => {
+      const a = reporter.startCommand('query a')
+      const b = reporter.startCommand('query b')
+      assert.equal(intervals.timers.size, 1)
+      now = 200
+      intervals.tickAll()
+      assert.match(stderr.text(), /query b/)
+      await reporter.suspend(async () => {
+        assert.equal(intervals.timers.size, 0)
+        const before = stderr.text()
+        now = 20_000
+        intervals.tickAll()
+        assert.equal(stderr.text(), before)
+        await reporter.suspend(async () => assert.equal(intervals.timers.size, 0))
+      })
+      assert.equal(intervals.timers.size, 1)
+      a.finish(); b.finish()
+    })
+  })
+  assert.equal(intervals.timers.size, 0)
+  await assert.rejects(reporter.stage('Failure', async () => { throw new Error('test') }))
+  assert.equal(intervals.timers.size, 0)
+})
+
+test('non-command async wait emits a heartbeat and stops cleanly', async () => {
+  let now = 0
+  const stderr = memoryStream()
+  const intervals = fakeIntervals()
+  const reporter = new ReleaseProgressReporter({ stderr, now: () => now,
+    setInterval: intervals.setInterval, clearInterval: intervals.clearInterval })
+  await reporter.stage('Review polling interval', async () => {
+    now = 10_000; intervals.tickAll()
+    assert.match(stderr.text(), /WAIT Review polling interval \(10.0s\)/)
+    assert.doesNotMatch(stderr.text(), /\u001B/)
+  })
+  assert.equal(intervals.timers.size, 0)
 })

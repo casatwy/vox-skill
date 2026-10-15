@@ -180,7 +180,7 @@ async function writeState(state) {
 async function advanceState(state, phase, extra = {}) {
   const updated = { ...state, ...extra, phase, updatedAt: new Date().toISOString() }
   await writeState(updated)
-  currentProgressReporter()?.setRecovery(phase, 'make publish RESUME=1')
+  currentProgressReporter()?.setRecovery(phase, 'make publish')
   return updated
 }
 
@@ -513,7 +513,7 @@ async function fullPreflight({ resume, state }) {
       })
     })
   }
-  if (resume && phaseAtLeast(recoveredState, 'prepared')) await runRepositoryValidation()
+  if (resume && phaseAtLeast(recoveredState, 'prepared') && !phaseAtLeast(recoveredState, 'tagged')) await runRepositoryValidation()
   else progressSkip('Repository validation preflight', 'runs while preparing the frozen workspace')
   const canonical = JSON.parse(await readFile(path.join(root, 'vox/manifest.json'), 'utf8'))
 
@@ -557,19 +557,23 @@ async function fullPreflight({ resume, state }) {
 }
 
 async function confirm(targetVersion, resume, runtime = {}) {
-  const expected = confirmationPhrase(targetVersion, resume)
-  if (runtime.confirm) {
-    await runtime.confirm(expected)
-    return
+  const operation = async () => {
+    const expected = confirmationPhrase(targetVersion, resume)
+    if (runtime.confirm) {
+      await runtime.confirm(expected)
+      return
+    }
+    const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
+    try {
+      const answer = await prompt.question(`Type "${expected}" to continue: `)
+      if (answer.trim() !== expected) throw new Error('Release confirmation did not match')
+    }
+    finally {
+      prompt.close()
+    }
   }
-  const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    const answer = await prompt.question(`Type "${expected}" to continue: `)
-    if (answer.trim() !== expected) throw new Error('Release confirmation did not match')
-  }
-  finally {
-    prompt.close()
-  }
+  const reporter = currentProgressReporter()
+  return reporter ? await reporter.suspend(operation) : await operation()
 }
 
 function assertFormalEnvironment(runtime = {}) {
@@ -582,19 +586,23 @@ function assertFormalEnvironment(runtime = {}) {
 }
 
 async function confirmAbort(targetVersion, runtime = {}) {
-  const expected = abortConfirmationPhrase(targetVersion)
-  if (runtime.confirm) {
-    await runtime.confirm(expected)
-    return
+  const operation = async () => {
+    const expected = abortConfirmationPhrase(targetVersion)
+    if (runtime.confirm) {
+      await runtime.confirm(expected)
+      return
+    }
+    const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
+    try {
+      const answer = await prompt.question(`Type "${expected}" to archive this frozen release: `)
+      if (answer.trim() !== expected) throw new Error('Abort confirmation did not match')
+    }
+    finally {
+      prompt.close()
+    }
   }
-  const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    const answer = await prompt.question(`Type "${expected}" to archive this frozen release: `)
-    if (answer.trim() !== expected) throw new Error('Abort confirmation did not match')
-  }
-  finally {
-    prompt.close()
-  }
+  const reporter = currentProgressReporter()
+  return reporter ? await reporter.suspend(operation) : await operation()
 }
 
 async function archiveFrozenAbort(originalState, preflight) {
@@ -809,19 +817,23 @@ async function terminalFixForwardPreflight(state) {
 }
 
 async function confirmFixForward(targetVersion, nextTarget, runtime = {}) {
-  const expected = fixForwardConfirmationPhrase(targetVersion, nextTarget)
-  if (runtime.confirm) {
-    await runtime.confirm(expected)
-    return
+  const operation = async () => {
+    const expected = fixForwardConfirmationPhrase(targetVersion, nextTarget)
+    if (runtime.confirm) {
+      await runtime.confirm(expected)
+      return
+    }
+    const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
+    try {
+      const answer = await prompt.question(`Type "${expected}" to abandon this terminal security release: `)
+      if (answer.trim() !== expected) throw new Error('Fix-forward confirmation did not match')
+    }
+    finally {
+      prompt.close()
+    }
   }
-  const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    const answer = await prompt.question(`Type "${expected}" to abandon this terminal security release: `)
-    if (answer.trim() !== expected) throw new Error('Fix-forward confirmation did not match')
-  }
-  finally {
-    prompt.close()
-  }
+  const reporter = currentProgressReporter()
+  return reporter ? await reporter.suspend(operation) : await operation()
 }
 
 async function archiveTerminalFixForward(originalState, preflight) {
@@ -995,19 +1007,23 @@ async function cleanSupersedePreflight(state) {
 }
 
 async function confirmSupersede(targetVersion, nextTarget, runtime = {}) {
-  const expected = supersedeConfirmationPhrase(targetVersion, nextTarget)
-  if (runtime.confirm) {
-    await runtime.confirm(expected)
-    return
+  const operation = async () => {
+    const expected = supersedeConfirmationPhrase(targetVersion, nextTarget)
+    if (runtime.confirm) {
+      await runtime.confirm(expected)
+      return
+    }
+    const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
+    try {
+      const answer = await prompt.question(`Type "${expected}" to archive this clean superseded release: `)
+      if (answer.trim() !== expected) throw new Error('Supersede confirmation did not match')
+    }
+    finally {
+      prompt.close()
+    }
   }
-  const prompt = readline.createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    const answer = await prompt.question(`Type "${expected}" to archive this clean superseded release: `)
-    if (answer.trim() !== expected) throw new Error('Supersede confirmation did not match')
-  }
-  finally {
-    prompt.close()
-  }
+  const reporter = currentProgressReporter()
+  return reporter ? await reporter.suspend(operation) : await operation()
 }
 
 async function archiveCleanSupersede(originalState, preflight) {
@@ -1389,7 +1405,7 @@ async function waitForClawHub(state, stage, runtime = {}) {
         await sleep(next)
       }
     }
-    throw new Error(`ClawHub ${state.targetVersion} [review.retryable]: ${lastReason}. Resume the same version with: make publish RESUME=1`)
+    throw new Error(`ClawHub ${state.targetVersion} [review.retryable]: ${lastReason}. Resume the same version with: make publish`)
   })
 }
 
@@ -1414,7 +1430,7 @@ async function verifyRemoteProviders(state) {
     const manifest = JSON.parse(content)
     const version = manifest.skillVersion ?? manifest.version ?? manifest.skill?.version
     if (version !== state.targetVersion) throw new Error(`Remote ${manifestPath} version mismatch`)
-    if (manifestPath === 'providers/metadata.json' && manifest.skill?.canonicalTreeHash !== await hashProviderTree(path.join(root, 'vox'))) {
+    if (manifestPath === 'providers/metadata.json' && manifest.skill?.canonicalTreeHash !== JSON.parse((await git(['show', `${state.releaseCommit}:providers/metadata.json`])).stdout).skill.canonicalTreeHash) {
       throw new Error('Remote canonical tree hash metadata mismatch')
     }
   }
@@ -1458,8 +1474,14 @@ async function completeRelease(state) {
 
 async function executeRelease(initialState, runtime = {}) {
   let state = initialState
-  currentProgressReporter()?.setRecovery(state.phase, 'make publish RESUME=1')
+  currentProgressReporter()?.setRecovery(state.phase, 'make publish')
   await progressStage('Validate frozen release source', async () => {
+    if (phaseAtLeast(state, 'tag_pushed')) { await tagEvidence(state); return }
+    if (phaseAtLeast(state, 'tagged')) {
+      const commit = (await git(['rev-parse', `${state.tag}^{commit}`])).stdout.trim()
+      if (commit !== state.releaseCommit) throw new Error('Local immutable tag differs from release state')
+      return
+    }
     const currentSourceSnapshot = await sourceSnapshot(state.baseVersion, state.targetVersion)
     if (currentSourceSnapshot !== state.sourceSnapshot) {
       throw new Error('Release source changed after the version was frozen')
@@ -1530,6 +1552,8 @@ async function executeRelease(initialState, runtime = {}) {
 async function runRelease(options, runtime, reporter) {
   initializeRecoveryPaths()
   const existingState = await readJsonIfPresent(statePath)
+  if (existingState && !options.abort && !options.fixForward && !options.supersede) options = { ...options, resume: true }
+  if (options.resume && !options.dryRun) reporter.mode('resume')
   const defaultNext = options.fixForward
     ? 'make fix-forward'
     : options.supersede
@@ -1537,10 +1561,10 @@ async function runRelease(options, runtime, reporter) {
       : options.abort
         ? 'make abort'
         : options.resume
-          ? 'make publish RESUME=1'
+          ? 'make publish'
           : 'make publish DRY_RUN=1'
   reporter.setRecovery(existingState?.phase ?? 'none', existingState && !options.abort && !options.fixForward && !options.supersede
-    ? 'make publish RESUME=1'
+    ? 'make publish'
     : defaultNext)
   if (options.fixForward) {
     if (!existingState) throw new Error('No unfinished vox Skill release exists to fix-forward')
@@ -1558,9 +1582,21 @@ async function runRelease(options, runtime, reporter) {
     return await abortFrozenRelease(existingState, runtime)
   }
   if (options.resume && !existingState) throw new Error('No unfinished vox Skill release exists')
-  if (!options.resume && existingState) throw new Error('An unfinished release exists; use make publish RESUME=1')
   if (!options.dryRun) assertFormalEnvironment(runtime)
 
+  if (existingState?.phase === 'tag_pushed' &&
+      await hashTree(path.join(root, 'vox')) !== existingState.canonicalTreeHash) {
+    const verification = await verifyExact(existingState.targetVersion)
+    let terminal = false
+    try { terminalSecurityEvidence(verification, existingState.targetVersion); terminal = true } catch {}
+    if (terminal) {
+      await terminalFixForwardPreflight(existingState)
+      await validateCandidate((await inspectVersions().then(allocateTargetVersion)).targetVersion)
+      if (options.dryRun) { process.stdout.write('Dry-run: repaired terminal release may advance after evidence verification.\n'); return null }
+      await fixForwardTerminalRelease(existingState, runtime)
+      return await runRelease({ ...options, resume: false }, runtime, reporter)
+    }
+  }
   const preflight = await fullPreflight({ resume: options.resume, state: existingState })
   const targetVersion = options.resume ? preflight.state.targetVersion : preflight.allocation.targetVersion
   const baseVersion = options.resume ? preflight.state.baseVersion : preflight.allocation.baseVersion
@@ -1594,7 +1630,7 @@ async function runRelease(options, runtime, reporter) {
       updatedAt: new Date().toISOString(),
     }
     await writeState(state)
-    reporter.setRecovery('frozen', 'make publish RESUME=1')
+    reporter.setRecovery('frozen', 'make publish')
     return state
   })
   return await executeRelease(state, runtime)

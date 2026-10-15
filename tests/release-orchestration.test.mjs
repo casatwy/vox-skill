@@ -1053,9 +1053,9 @@ test('pending review preserves one version and RESUME completes without republis
     assert.match(pending.stderr, /Resume the same version/)
     assert.match(pending.stderr, /\[release\] POLL ClawHub review:/)
     assert.match(pending.stderr, /recovery_phase=tag_pushed/)
-    assert.match(pending.stderr, /next="make publish RESUME=1"/)
+    assert.match(pending.stderr, /next="make publish"/)
     assert.equal((await readJson(fixture.statePath)).phase, 'tag_pushed')
-    const resumed = await fixture.formal(['--resume'], {
+    const resumed = await fixture.formal([], {
       MOCK_CONFIRM: 'resume vox v1.0.9',
     })
     assert.equal(resumed.code, 0, resumed.stderr)
@@ -1088,13 +1088,13 @@ test('tag and master push failures retain phase and resume the same release', { 
         assert.match(failed.stderr, /\[release\] FAIL (Push immutable release tag|Push verified release to master)/)
         assert.match(failed.stderr, new RegExp(`recovery_phase=${failure.phase}`))
         assert.match(failed.stderr, /exit=42/)
-        assert.match(failed.stderr, /next="make publish RESUME=1"/)
+        assert.match(failed.stderr, /next="make publish"/)
         assert.equal(
           failed.stderr.match(new RegExp(`simulated ${failure.kind} push failure`, 'g'))?.length,
           1,
         )
         assert.equal((await readJson(fixture.statePath)).phase, failure.phase)
-        const resumed = await fixture.formal(['--resume'], {
+        const resumed = await fixture.formal([], {
           MOCK_CONFIRM: 'resume vox v1.0.9',
         })
         assert.equal(resumed.code, 0, resumed.stderr)
@@ -1122,7 +1122,7 @@ test('clawhub-ready resume rejects projection evidence drift before activating m
     state.clawHubFileFingerprint = [{ path: 'SKILL.md', size: 1, sha256: 'e'.repeat(64) }]
     await writeFile(fixture.statePath, `${JSON.stringify(state, null, 2)}\n`)
 
-    const resumed = await fixture.formal(['--resume'], {
+    const resumed = await fixture.formal([], {
       MOCK_CONFIRM: 'resume vox v1.0.9',
     })
     assert.equal(resumed.code, 1)
@@ -1142,7 +1142,7 @@ test('clean published release with later canonical master requires supersede, ar
   const fixture = await createFixture()
   try {
     const oldState = await createCleanAdvancedRelease(fixture)
-    const resumed = await fixture.formal(['--resume'], { MOCK_CONFIRM: 'resume vox v1.0.9' })
+    const resumed = await fixture.formal([], { MOCK_CONFIRM: 'resume vox v1.0.9' })
     assert.equal(resumed.code, 1)
     assert.match(resumed.stderr, /Run make supersede/)
 
@@ -1302,7 +1302,7 @@ test('Git pointer file stores recovery state in the resolved Git directory', asy
     assert.equal(result.code, 1, result.stderr)
     const state = await readJson(path.join(gitDirectory, 'vox-release/state.json'))
     assert.equal(state.phase, 'tag_pushed')
-    const resumed = await fixture.formal(['--resume'], { MOCK_CONFIRM: 'resume vox v1.0.9' })
+    const resumed = await fixture.formal([], { MOCK_CONFIRM: 'resume vox v1.0.9' })
     assert.equal(resumed.code, 0, resumed.stderr)
     await access(path.join(gitDirectory, 'vox-release/receipts/v1.0.9.json'))
   } finally { await fixture.cleanup() }
@@ -1312,8 +1312,8 @@ test('Git pointer file stores recovery state in the resolved Git directory', asy
 test('review recovery hints preserve immutable release evidence', { timeout: 120_000 }, async (t) => {
   const cases = [
     { mode: 'terminal', next: 'make fix-forward' },
-    { mode: 'pending', next: 'make publish RESUME=1' },
-    { mode: 'network', next: 'make publish RESUME=1' },
+    { mode: 'pending', next: 'make publish' },
+    { mode: 'network', next: 'make publish' },
     { mode: 'terminal-wrong-owner', next: 'Stop and inspect release evidence' },
     { mode: 'terminal-wrong-version', next: 'Stop and inspect release evidence' },
     { mode: 'terminal-extra', next: 'Stop and inspect release evidence' },
@@ -1326,7 +1326,7 @@ test('review recovery hints preserve immutable release evidence', { timeout: 120
         const remoteBase = (await fixture.git(['rev-parse', 'origin/master'])).stdout.trim()
         await createTerminalSecurityRelease(fixture)
         const before = await readJson(fixture.statePath)
-        const result = await fixture.formal(['--resume'], {
+        const result = await fixture.formal([], {
           MOCK_CONFIRM: 'resume vox v1.0.9',
           MOCK_CLAWHUB_VERIFY: scenario.mode,
           MOCK_REVIEW_TIMEOUT_MS: '0',
